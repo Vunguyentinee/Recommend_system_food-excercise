@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dang ky</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .card {
+      width: 100%;
+      max-width: 460px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+    h2 { margin: 0 0 12px 0; }
+    .muted { color: var(--muted); font-size: 12px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 4px; }
+    input, select, button {
+      font-size: 14px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      background: #fff;
+    }
+    button {
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      border: 0;
+      transition: background 0.2s ease;
+      margin-top: 12px;
+    }
+    button:hover { background: var(--primary-dark); }
+    .btn-success { background: var(--success); }
+    .btn-success:hover { background: #15803d; }
+    .actions { display: flex; gap: 8px; margin-top: 8px; }
+    .actions button { width: auto; flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Dang ky</h2>
+    <div class="muted">Tao tai khoan de vao dashboard</div>
+
+    <label>UserName</label>
+    <input id="registerUserName" placeholder="VD: user31" />
+
+    <label>Email</label>
+    <input id="registerEmail" placeholder="user31@example.com" />
+
+    <label>Mat khau</label>
+    <input id="registerPassword" type="password" placeholder="Toi thieu 6 ky tu" />
+
+    <button class="btn-success" onclick="register()">Dang ky</button>
+    <div class="actions">
+      <button onclick="goLogin()">Quay lai dang nhap</button>
+      <button onclick="goDashboard()">Vao thang dashboard</button>
+    </div>
+
+    <div id="registerMsg" class="muted" style="margin-top: 8px;"></div>
+  </div>
+
+  <script>
+    function setSession(userId, role) {
+      localStorage.setItem('session', JSON.stringify({ userId, role }));
+    }
+
+    function baseUrl() {
+      return window.location.origin;
+    }
+
+    function register() {
+      const userName = document.getElementById('registerUserName').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
+      const password = document.getElementById('registerPassword').value;
+      if (!userName || !email || !password) {
+        document.getElementById('registerMsg').textContent = 'Vui long nhap day du thong tin.';
+        return;
+      }
+      fetch(`${baseUrl()}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userName, password, email })
+      })
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+          if (!ok) {
+            document.getElementById('registerMsg').textContent = data.message || 'Dang ky that bai.';
+            return;
+          }
+          setSession(data.userId, data.role || 'user');
+          window.location.href = 'app.html';
+        })
+        .catch(err => {
+          document.getElementById('registerMsg').textContent = err.message;
+        });
+    }
+
+    function goLogin() {
+      window.location.href = 'login.html';
+    }
+
+    function goDashboard() {
+      window.location.href = 'app.html';
+    }
+  </script>
+</body>
+</html>
+

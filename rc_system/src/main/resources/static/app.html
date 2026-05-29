@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Dinh Duong - Dashboard</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 18px 24px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    header h2 { margin: 0; font-weight: 600; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .container { padding: 20px 24px 32px; max-width: 1200px; margin: 0 auto; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .section h3 { margin: 0 0 10px 0; }
+    .muted { color: var(--muted); font-size: 12px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    input, select, textarea, button {
+      font-size: 14px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }
+    input, select, textarea { width: 100%; }
+    button {
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      border: 0;
+      transition: background 0.2s ease;
+      white-space: nowrap;
+    }
+    button:hover { background: var(--primary-dark); }
+    .btn-success { background: var(--success); }
+    .btn-success:hover { background: #15803d; }
+    .btn-warning { background: var(--warning); }
+    .btn-warning:hover { background: #d97706; }
+    .pill { display: inline-block; padding: 4px 8px; font-size: 12px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+    .progress {
+      height: 12px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-bar { height: 100%; background: var(--success); width: 0%; transition: width 0.3s ease; }
+    .food-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+    .food-item { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: #fff; }
+    .food-title { font-weight: 600; margin-bottom: 6px; }
+    .food-meta { font-size: 12px; color: var(--muted); }
+    .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .stars { display: flex; gap: 4px; }
+    .star { cursor: pointer; color: #d1d5db; font-size: 16px; }
+    .star.active { color: #f59e0b; }
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal {
+      background: #fff;
+      padding: 16px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { border: 1px solid var(--border); padding: 8px; font-size: 13px; }
+    .table th { background: #f8fafc; text-align: left; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h2>AI Dinh Dưỡng - Lượng khuyến nghị chuyên nghiệp</h2>
+      <div class="muted" id="sessionInfo">Người dùng chưa thực hiện đăng nhập</div>
+    </div>
+    <div class="header-actions">
+      <div>
+        <label>Base URL</label>
+        <input id="baseUrl" value="http://localhost:8080" />
+      </div>
+      <button onclick="logout()">Dang xuat</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <section id="page-survey" class="section hidden">
+      <h3>Khảo sát thông tin người dùng (Health Profile)</h3>
+      <div class="row">
+        <div><label>Cân nặng(kg)</label><input id="weight" value="65" /></div>
+        <div><label>Chiều cao(cm)</label><input id="height" value="170" /></div>
+        <div><label>Tuổi</label><input id="age" value="25" /></div>
+        <div>
+          <label>Giới tính</label>
+          <select id="gender">
+            <option value="male">Nam</option>
+            <option value="female">Nữ</option>
+          </select>
+        </div>
+        <div>
+          <label>Mức vận động</label>
+          <select id="activityLevel">
+            <option value="1.2"></option>
+            <option value="1.375">Ít vận động</option>
+            <option value="1.55" selected>Vừa</option>
+            <option value="1.725">Vận động nhiều</option>
+          </select>
+        </div>
+        <div>
+          <label>Mục tiêu</label>
+          <select id="healthGoal">
+            <option value="maintain">Giữ dáng</option>
+            <option value="lose">Giảm cân</option>
+            <option value="gain">Tăng cân</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Ràng buộc sức khỏe (Dị ứng...)</label>
+          <input id="constraints" placeholder="Khong hai san, it duong" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-success" onclick="saveProfile()">Luu ho so</button>
+        <button onclick="goToDashboard()">Bo qua</button>
+      </div>
+      <div id="surveyMsg" class="muted"></div>
+    </section>
+
+    <section id="page-onboarding" class="section hidden">
+      <h3>Onboarding: Chon mon yeu thich</h3>
+      <div class="actions">
+        <button onclick="loadPopularFoods()">Tai 20 mon pho bien</button>
+        <button class="btn-success" onclick="saveFavorites()">Luu mon yeu thich (Rating=5)</button>
+      </div>
+      <div id="popularFoods" class="food-list"></div>
+      <div id="onboardMsg" class="muted"></div>
+    </section>
+
+    <section id="page-dashboard" class="section hidden">
+      <h3>Dashboard</h3>
+      <div class="grid-3">
+        <div class="card">
+          <div class="pill">Tien trinh Calo ngay</div>
+          <div class="progress" style="margin: 10px 0;">
+            <div id="caloBar" class="progress-bar"></div>
+          </div>
+          <div class="muted" id="caloText">Chua co du lieu</div>
+        </div>
+        <div class="card">
+          <div class="pill">Dieu khien</div>
+          <div class="actions">
+            <button onclick="refreshDashboard()">Tai goi y moi</button>
+            <button class="btn-warning" onclick="refreshTdee()">Tinh lai TDEE</button>
+            <button onclick="goToSurvey()">Cap nhat ho so</button>
+          </div>
+          <div id="dashMsg" class="muted"></div>
+        </div>
+        <div class="card">
+          <div class="pill">Bai tap (de sau)</div>
+          <div class="muted">Chua co API bai tap.</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="pill">Bua sang (CF)</div>
+          <div id="breakfastList" class="food-list"></div>
+        </div>
+        <div class="card">
+          <div class="pill">Bua trua (CF)</div>
+          <div id="lunchList" class="food-list"></div>
+        </div>
+        <div class="card">
+          <div class="pill">Bua toi (CF)</div>
+          <div id="dinnerList" class="food-list"></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="pill">Tich hoan thanh & cham sao</div>
+          <div id="actionFoods" class="food-list"></div>
+        </div>
+        <div class="card">
+          <div class="pill">Nhat ky tuong tac</div>
+          <textarea id="actionLog" readonly></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-admin" class="section hidden">
+      <h3>Admin Dashboard</h3>
+      <div class="grid-2">
+        <div class="card">
+          <div class="pill">Quan ly kho thuc pham</div>
+          <div class="row">
+            <div><label>Ten mon</label><input id="adminName" /></div>
+            <div><label>Calo</label><input id="adminCalories" /></div>
+            <div><label>Protein</label><input id="adminProtein" /></div>
+            <div><label>Carbs</label><input id="adminCarbs" /></div>
+            <div><label>Fat</label><input id="adminFat" /></div>
+            <div><label>Don vi</label><input id="adminUnit" /></div>
+            <div><label>Meal Type</label><input id="adminMealType" /></div>
+            <div>
+              <label>Category</label>
+              <select id="adminCategory">
+                <option value="Món tinh bột">Món tinh bột</option>
+                <option value="Món đạm">Món đạm</option>
+                <option value="Món rau">Món rau</option>
+                <option value="Món hoa quả">Món hoa quả</option>
+                <option value="Món hỗn hợp">Món hỗn hợp</option>
+                <option value="Món nước">Món nước</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-success" onclick="createFood()">Them</button>
+            <button onclick="updateFood()">Cap nhat</button>
+            <button class="btn-warning" onclick="deleteFood()">Xoa</button>
+            <button onclick="loadAdminFoods()">Tai danh sach</button>
+          </div>
+          <div id="adminMsg" class="muted"></div>
+        </div>
+        <div class="card">
+          <div class="pill">Danh sach mon</div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Ten</th>
+                <th>Calo</th>
+                <th>Category</th>
+                <th>Chon</th>
+              </tr>
+            </thead>
+            <tbody id="adminFoodTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="ratingOverlay" class="overlay">
+    <div class="modal">
+      <h4>Cham diem mon an</h4>
+      <div id="ratingFoodName" class="muted"></div>
+      <div class="stars" id="ratingStars"></div>
+      <div class="actions" style="margin-top: 12px;">
+        <button class="btn-success" onclick="submitRating()">Luu diem</button>
+        <button onclick="closeRating()">Huy</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let latestFoods = [];
+    let selectedFoodId = null;
+    let selectedRating = 5;
+
+    function getValue(id) { return document.getElementById(id).value; }
+    function baseUrl() { return getValue('baseUrl'); }
+
+    function getSession() {
+      const raw = localStorage.getItem('session');
+      return raw ? JSON.parse(raw) : null;
+    }
+
+    function getProfile(userId) {
+      const raw = localStorage.getItem(`profile_${userId}`);
+      return raw ? JSON.parse(raw) : null;
+    }
+
+    function setProfile(userId, profile) {
+      localStorage.setItem(`profile_${userId}`, JSON.stringify(profile));
+    }
+
+    function ensureSession() {
+      const session = getSession();
+      if (!session) {
+        window.location.href = 'login.html';
+        return null;
+      }
+      return session;
+    }
+
+    function updateSessionInfo() {
+      const session = getSession();
+      const text = session ? `Dang nhap: ${session.role} (UserID=${session.userId})` : 'Chua dang nhap';
+      document.getElementById('sessionInfo').textContent = text;
+    }
+
+    function showPage(pageId) {
+      const pages = ['page-survey', 'page-onboarding', 'page-dashboard', 'page-admin'];
+      pages.forEach(id => {
+        document.getElementById(id).classList.toggle('hidden', id !== pageId);
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem('session');
+      window.location.href = 'login.html';
+    }
+
+    function routeAfterLogin(session) {
+      if (!session) return;
+      if (session.role === 'admin') {
+        showPage('page-admin');
+        loadAdminFoods();
+        return;
+      }
+
+      const profile = localStorage.getItem(`profile_${session.userId}`);
+      if (!profile) {
+        showPage('page-survey');
+      } else {
+        showPage('page-dashboard');
+        refreshDashboard();
+      }
+    }
+
+    function saveProfile() {
+      const session = ensureSession();
+      if (!session) return;
+      const profile = {
+        weight: getValue('weight'),
+        height: getValue('height'),
+        age: getValue('age'),
+        gender: getValue('gender'),
+        activityLevel: getValue('activityLevel'),
+        healthGoal: getValue('healthGoal'),
+        constraints: getValue('constraints')
+      };
+      localStorage.setItem(`profile_${session.userId}`, JSON.stringify(profile));
+      document.getElementById('surveyMsg').textContent = 'Da luu ho so (local).';
+      showPage('page-onboarding');
+      loadPopularFoods();
+    }
+
+    function goToSurvey() {
+      showPage('page-survey');
+    }
+
+    function goToDashboard() {
+      showPage('page-dashboard');
+      refreshDashboard();
+    }
+
+    function logAction(message) {
+      const log = document.getElementById('actionLog');
+      log.value = `[${new Date().toLocaleTimeString()}] ${message}\n` + log.value;
+    }
+
+    function calculateTargetCalories() {
+      const weight = parseFloat(getValue('weight')) || 0;
+      const height = parseFloat(getValue('height')) || 0;
+      const age = parseFloat(getValue('age')) || 0;
+      const gender = getValue('gender');
+      const activity = parseFloat(getValue('activityLevel')) || 1;
+
+      const bmr = gender === 'male'
+        ? (10 * weight) + (6.25 * height) - (5 * age) + 5
+        : (10 * weight) + (6.25 * height) - (5 * age) - 161;
+      return Math.round(bmr * activity);
+    }
+
+    function loadPopularFoods() {
+      const url = `${baseUrl()}/api/recommend-popular?topK=20`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const foods = data.data || [];
+          const container = document.getElementById('popularFoods');
+          container.innerHTML = foods.map(food => `
+            <div class="food-item">
+              <label>
+                <input type="checkbox" class="favFood" value="${food.id}" />
+                <span class="food-title">${food.name}</span>
+              </label>
+              <div class="food-meta">${food.category} • ${food.calories} kcal</div>
+            </div>
+          `).join('');
+        })
+        .catch(err => {
+          document.getElementById('onboardMsg').textContent = err.message;
+        });
+    }
+
+    function saveFavorites() {
+      const session = ensureSession();
+      if (!session) return;
+      const userId = session.userId;
+      const selected = Array.from(document.querySelectorAll('.favFood:checked'))
+        .map(el => el.value);
+      if (selected.length < 3) {
+        document.getElementById('onboardMsg').textContent = 'Vui long chon it nhat 3 mon.';
+        return;
+      }
+
+      const requests = selected.map(foodId => {
+        const url = `${baseUrl()}/api/rate-food?userId=${userId}&foodId=${foodId}&rating=5`;
+        return fetch(url, { method: 'POST' });
+      });
+
+      Promise.all(requests)
+        .then(() => {
+          document.getElementById('onboardMsg').textContent = 'Da luu ua thich thanh Rating=5.';
+          logAction('Onboarding: luu mon yeu thich thanh Rating=5');
+          showPage('page-dashboard');
+          refreshDashboard();
+        })
+        .catch(err => {
+          document.getElementById('onboardMsg').textContent = err.message;
+        });
+    }
+
+    function refreshDashboard() {
+      const session = ensureSession();
+      if (!session) return;
+      const userId = session.userId;
+      const profile = getProfile(userId) || {};
+      const isTraditional = true;
+      const url = `${baseUrl()}/api/recommend-smart?userId=${userId}`
+        + `&topK=9&isTraditional=${isTraditional}`
+        + `&weight=${profile.weight || ''}&height=${profile.height || ''}`
+        + `&age=${profile.age || ''}&gender=${profile.gender || ''}`
+        + `&activityLevel=${profile.activityLevel || ''}&healthGoal=${profile.healthGoal || ''}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          latestFoods = data.data || [];
+          if (data.meals) {
+            renderMealGroups(data.meals);
+          } else {
+            renderMeals(latestFoods);
+          }
+          renderActionFoods(latestFoods);
+          renderCalories(latestFoods);
+          document.getElementById('dashMsg').textContent = `Da tai ${latestFoods.length} mon.`;
+        })
+        .catch(err => {
+          document.getElementById('dashMsg').textContent = err.message;
+        });
+    }
+
+    function renderMealGroups(meals) {
+      const breakfast = meals.breakfast || [];
+      const lunch = meals.lunch || [];
+      const dinner = meals.dinner || [];
+
+      document.getElementById('breakfastList').innerHTML = renderFoodCards(breakfast);
+      document.getElementById('lunchList').innerHTML = renderFoodCards(lunch);
+      document.getElementById('dinnerList').innerHTML = renderFoodCards(dinner);
+    }
+
+    function renderMeals(foods) {
+      const breakfast = foods.filter(f => (f.mealType || '').toLowerCase().includes('breakfast'));
+      const lunch = foods.filter(f => (f.mealType || '').toLowerCase().includes('lunch'));
+      const dinner = foods.filter(f => (f.mealType || '').toLowerCase().includes('dinner'));
+
+      document.getElementById('breakfastList').innerHTML = renderFoodCards(breakfast);
+      document.getElementById('lunchList').innerHTML = renderFoodCards(lunch);
+      document.getElementById('dinnerList').innerHTML = renderFoodCards(dinner);
+    }
+
+    function renderFoodCards(list) {
+      if (!list.length) return '<div class="muted">Khong co du lieu</div>';
+      return list.slice(0, 3).map(food => `
+        <div class="food-item">
+          <div class="food-title">${food.name}</div>
+          <div class="food-meta">${food.category} • ${food.calories} kcal</div>
+        </div>
+      `).join('');
+    }
+
+    function renderCalories(foods) {
+      const total = foods.reduce((sum, f) => sum + (f.calories || 0), 0);
+      const target = calculateTargetCalories();
+      const percent = target ? Math.min(100, Math.round((total / target) * 100)) : 0;
+      document.getElementById('caloBar').style.width = `${percent}%`;
+      document.getElementById('caloText').textContent = `Tieu thu: ${Math.round(total)} kcal / Muc tieu: ${target} kcal (${percent}%)`;
+    }
+
+    function renderActionFoods(foods) {
+      const container = document.getElementById('actionFoods');
+      if (!foods.length) {
+        container.innerHTML = '<div class="muted">Hay tai goi y tu Dashboard truoc.</div>';
+        return;
+      }
+      container.innerHTML = foods.map(food => `
+        <div class="food-item">
+          <div class="food-title">${food.name}</div>
+          <div class="food-meta">${food.category} • ${food.calories} kcal</div>
+          <div class="actions">
+            <button class="btn-success" onclick="openRating(${food.id}, '${food.name.replace(/'/g, "\\'")}')">Hoan thanh & cham sao</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openRating(foodId, name) {
+      selectedFoodId = foodId;
+      selectedRating = 5;
+      document.getElementById('ratingFoodName').textContent = name;
+      const stars = document.getElementById('ratingStars');
+      stars.innerHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        const span = document.createElement('span');
+        span.className = 'star' + (i <= selectedRating ? ' active' : '');
+        span.textContent = '★';
+        span.onclick = () => setRating(i);
+        stars.appendChild(span);
+      }
+      document.getElementById('ratingOverlay').style.display = 'flex';
+    }
+
+    function setRating(value) {
+      selectedRating = value;
+      const stars = document.querySelectorAll('#ratingStars .star');
+      stars.forEach((star, idx) => {
+        star.classList.toggle('active', idx < value);
+      });
+    }
+
+    function closeRating() {
+      document.getElementById('ratingOverlay').style.display = 'none';
+    }
+
+    function submitRating() {
+      const session = ensureSession();
+      if (!session) return;
+      const userId = session.userId;
+      const url = `${baseUrl()}/api/rate-food?userId=${userId}&foodId=${selectedFoodId}&rating=${selectedRating}`;
+      fetch(url, { method: 'POST' })
+        .then(res => res.json())
+        .then(() => {
+          logAction(`Da cham ${selectedRating}★ cho foodId=${selectedFoodId}`);
+          closeRating();
+          refreshDashboard();
+        })
+        .catch(err => {
+          logAction(`Loi cham sao: ${err.message}`);
+        });
+    }
+
+    function loadAdminFoods() {
+      const url = `${baseUrl()}/api/admin/foods`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const rows = data.map(food => `
+            <tr>
+              <td>${food.id}</td>
+              <td>${food.name}</td>
+              <td>${food.calories}</td>
+              <td>${food.category}</td>
+              <td><button onclick="selectFood(${food.id})">Chon</button></td>
+            </tr>
+          `).join('');
+          document.getElementById('adminFoodTable').innerHTML = rows;
+        })
+        .catch(err => { document.getElementById('adminMsg').textContent = err.message; });
+    }
+
+    function selectFood(id) {
+      const url = `${baseUrl()}/api/admin/foods/${id}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(food => {
+          document.getElementById('adminName').value = food.name || '';
+          document.getElementById('adminCalories').value = food.calories || '';
+          document.getElementById('adminProtein').value = food.protein || '';
+          document.getElementById('adminCarbs').value = food.carbs || '';
+          document.getElementById('adminFat').value = food.fat || '';
+          document.getElementById('adminUnit').value = food.servingUnit || '';
+          document.getElementById('adminMealType').value = food.mealType || '';
+          document.getElementById('adminCategory').value = food.category || 'Món tinh bột';
+          document.getElementById('adminMsg').textContent = `Dang chon foodId=${food.id}`;
+          document.getElementById('adminMsg').dataset.selectedId = food.id;
+        });
+    }
+
+    function buildFoodPayload() {
+      return {
+        name: getValue('adminName'),
+        calories: parseFloat(getValue('adminCalories')) || 0,
+        protein: parseFloat(getValue('adminProtein')) || 0,
+        carbs: parseFloat(getValue('adminCarbs')) || 0,
+        fat: parseFloat(getValue('adminFat')) || 0,
+        servingUnit: getValue('adminUnit'),
+        mealType: getValue('adminMealType'),
+        category: getValue('adminCategory')
+      };
+    }
+
+    function createFood() {
+      const url = `${baseUrl()}/api/admin/foods`;
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildFoodPayload())
+      })
+        .then(res => res.json())
+        .then(() => { document.getElementById('adminMsg').textContent = 'Da them mon.'; loadAdminFoods(); })
+        .catch(err => { document.getElementById('adminMsg').textContent = err.message; });
+    }
+
+    function updateFood() {
+      const selectedId = document.getElementById('adminMsg').dataset.selectedId;
+      if (!selectedId) { document.getElementById('adminMsg').textContent = 'Chua chon mon de cap nhat.'; return; }
+      const url = `${baseUrl()}/api/admin/foods/${selectedId}`;
+      fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildFoodPayload())
+      })
+        .then(res => res.json())
+        .then(() => { document.getElementById('adminMsg').textContent = 'Da cap nhat mon.'; loadAdminFoods(); })
+        .catch(err => { document.getElementById('adminMsg').textContent = err.message; });
+    }
+
+    function deleteFood() {
+      const selectedId = document.getElementById('adminMsg').dataset.selectedId;
+      if (!selectedId) { document.getElementById('adminMsg').textContent = 'Chua chon mon de xoa.'; return; }
+      const url = `${baseUrl()}/api/admin/foods/${selectedId}`;
+      fetch(url, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(() => { document.getElementById('adminMsg').textContent = 'Da xoa mon.'; loadAdminFoods(); })
+        .catch(err => { document.getElementById('adminMsg').textContent = err.message; });
+    }
+
+    const session = ensureSession();
+    if (session) {
+      updateSessionInfo();
+      routeAfterLogin(session);
+    }
+  </script>
+</body>
+</html>
+

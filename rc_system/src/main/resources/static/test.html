@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Test Console</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      color: #fff;
+    }
+    header h2 { margin: 0; font-weight: 600; }
+    .container { padding: 20px 24px 32px; max-width: 1100px; margin: 0 auto; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    input, select, button, textarea {
+      font-size: 14px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }
+    input, select { width: 100%; }
+    textarea { width: 100%; height: 240px; font-family: Consolas, monospace; }
+    button {
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      border: 0;
+      transition: background 0.2s ease;
+      white-space: nowrap;
+    }
+    button:hover { background: var(--primary-dark); }
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .muted { color: var(--muted); font-size: 12px; }
+    .button-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Backend API Test</h2>
+  </header>
+  <div class="container">
+    <div class="section">
+      <div class="row">
+        <div>
+          <label>Base URL</label>
+          <input id="baseUrl" value="http://localhost:8080" />
+        </div>
+        <div>
+          <label>User ID</label>
+          <input id="userId" value="31" />
+        </div>
+        <div>
+          <label>TopK</label>
+          <input id="topK" value="5" />
+        </div>
+        <div>
+          <label>User Weight (Hybrid)</label>
+          <input id="userWeight" value="0.6" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Weight</label>
+          <input id="weight" value="65" />
+        </div>
+        <div>
+          <label>Height</label>
+          <input id="height" value="170" />
+        </div>
+        <div>
+          <label>Age</label>
+          <input id="age" value="25" />
+        </div>
+        <div>
+          <label>Gender</label>
+          <select id="gender">
+            <option value="male">male</option>
+            <option value="female">female</option>
+          </select>
+        </div>
+        <div>
+          <label>Activity Level</label>
+          <input id="activityLevel" value="1.55" />
+        </div>
+        <div>
+          <label>Health Goal</label>
+          <input id="healthGoal" value="maintain" />
+        </div>
+        <div>
+          <label>Traditional</label>
+          <select id="isTraditional">
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Food ID (rate)</label>
+          <input id="foodId" value="1" />
+        </div>
+        <div>
+          <label>Rating</label>
+          <input id="rating" value="5" />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="button-grid">
+        <button onclick="callEndpoint('recommend-cf')">recommend-cf</button>
+        <button onclick="callEndpoint('recommend-cf-item')">recommend-cf-item</button>
+        <button onclick="callEndpoint('recommend-cf-hybrid')">recommend-cf-hybrid</button>
+        <button onclick="callEndpoint('recommend-tdee')">recommend-tdee</button>
+        <button onclick="callEndpoint('recommend-popular')">recommend-popular</button>
+        <button onclick="callEndpoint('recommend-smart-user')">recommend-smart (userId)</button>
+        <button onclick="callEndpoint('recommend-smart-profile')">recommend-smart (profile)</button>
+        <button onclick="callEndpoint('onboard')">onboard</button>
+        <button onclick="callEndpoint('suggest-after-rating')">suggest-after-rating</button>
+        <button onclick="callEndpoint('user-status')">user-status</button>
+        <button onclick="callEndpoint('user-ratings')">user-ratings</button>
+        <button onclick="callEndpoint('debug-cf-status')">debug-cf-status</button>
+        <button onclick="callEndpoint('debug-cf-detailed')">debug-cf-detailed</button>
+        <button onclick="callEndpoint('rate-food')">rate-food (POST)</button>
+      </div>
+      <div class="muted">Response shows JSON from the backend. If rate-food fails, check FK user in dbo.Users.</div>
+    </div>
+
+    <div class="section">
+      <label>Response</label>
+      <textarea id="output" readonly></textarea>
+    </div>
+  </div>
+
+  <script>
+    function getValue(id) {
+      return document.getElementById(id).value;
+    }
+
+    function buildUrl(path, params) {
+      const baseUrl = getValue('baseUrl');
+      const url = new URL(baseUrl + path);
+      Object.keys(params).forEach((key) => {
+        const value = params[key];
+        if (value !== null && value !== undefined && value !== '') {
+          url.searchParams.set(key, value);
+        }
+      });
+      return url.toString();
+    }
+
+    async function request(url, method) {
+      const output = document.getElementById('output');
+      output.value = 'Loading...';
+      try {
+        const response = await fetch(url, { method });
+        const text = await response.text();
+        output.value = text || '<empty response>';
+      } catch (err) {
+        output.value = err.message;
+      }
+    }
+
+    function callEndpoint(type) {
+      const userId = getValue('userId');
+      const topK = getValue('topK');
+      const userWeight = getValue('userWeight');
+      const weight = getValue('weight');
+      const height = getValue('height');
+      const age = getValue('age');
+      const gender = getValue('gender');
+      const activityLevel = getValue('activityLevel');
+      const healthGoal = getValue('healthGoal');
+      const isTraditional = getValue('isTraditional');
+      const foodId = getValue('foodId');
+      const rating = getValue('rating');
+
+      let url = '';
+      let method = 'GET';
+
+      switch (type) {
+        case 'recommend-cf':
+          url = buildUrl('/api/recommend-cf', { userId, topK });
+          break;
+        case 'recommend-cf-item':
+          url = buildUrl('/api/recommend-cf-item', { userId, topK });
+          break;
+        case 'recommend-cf-hybrid':
+          url = buildUrl('/api/recommend-cf-hybrid', { userId, topK, userWeight });
+          break;
+        case 'recommend-tdee':
+          url = buildUrl('/api/recommend-tdee', { weight, height, age, gender, activityLevel, healthGoal, isTraditional });
+          break;
+        case 'recommend-popular':
+          url = buildUrl('/api/recommend-popular', { topK });
+          break;
+        case 'recommend-smart-user':
+          url = buildUrl('/api/recommend-smart', { userId, topK });
+          break;
+        case 'recommend-smart-profile':
+          url = buildUrl('/api/recommend-smart', { weight, height, age, gender, activityLevel, healthGoal, topK, isTraditional });
+          break;
+        case 'onboard':
+          url = buildUrl('/api/onboard/initial-recommendation', { weight, height, age, gender, activityLevel, healthGoal, topK: 10, isTraditional });
+          break;
+        case 'suggest-after-rating':
+          url = buildUrl('/api/suggest-after-rating', { userId, topK });
+          break;
+        case 'user-status':
+          url = buildUrl('/api/user-status/' + encodeURIComponent(userId), {});
+          break;
+        case 'user-ratings':
+          url = buildUrl('/api/user-ratings/' + encodeURIComponent(userId), {});
+          break;
+        case 'debug-cf-status':
+          url = buildUrl('/api/debug/cf-status', { userId });
+          break;
+        case 'debug-cf-detailed':
+          url = buildUrl('/api/debug/cf-detailed', { userId });
+          break;
+        case 'rate-food':
+          url = buildUrl('/api/rate-food', { userId, foodId, rating });
+          method = 'POST';
+          break;
+        default:
+          return;
+      }
+
+      request(url, method);
+    }
+  </script>
+</body>
+</html>
+
