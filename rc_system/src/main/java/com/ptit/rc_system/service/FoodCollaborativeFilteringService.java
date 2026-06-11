@@ -7,14 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.*;
 
 @Service
-public class CollaborativeFilteringService {
+public class FoodCollaborativeFilteringService {
 
     @Autowired
     private InteractionLogRepository logRepository;
 
     // 1. Nhóm dữ liệu thành Ma Trận: User -> (Food -> Rating)
     public Map<Long, Map<Long, Double>> buildUserItemMatrix() {
-        List<InteractionLog> logs = logRepository.findAllByFoodIdIsNotNull();
+        List<InteractionLog> logs = logRepository.findAllByFoodIdIsNotNullAndRatingIsNotNull();
         Map<Long, Map<Long, Double>> matrix = new HashMap<>();
 
         for (InteractionLog log : logs) {

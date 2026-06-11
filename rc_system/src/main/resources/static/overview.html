@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tổng quan - Hệ Thống AI sức khỏe cho bạn</title>
+  <link rel="stylesheet" href="css/overview.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a class="nav-logo" href="overview.html" title="Tổng quan" aria-label="Tổng quan">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M15 24h18M9 17v14M14 14v20M34 14v20M39 17v14M9 24H5M39 24h4" />
+        </svg>
+      </a>
+      <a class="nav-link" href="nutrition.html">Món ăn</a>
+      <a class="nav-link" href="workout.html">Bài tập</a>
+    </div>
+    <div class="nav-right">
+      <span id="navUser" class="nav-user"></span>
+      <a id="navLogin" class="nav-link" href="login.html">Đăng nhập</a>
+      <a id="navLogout" class="nav-link" href="#" onclick="logout(); return false;">Đăng xuất</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2 id="welcomeMessage" class="welcome"></h2>
+    <section class="section profile-section">
+      <h3>Thông tin cơ thể</h3>
+      <div class="grid-2">
+        <div class="card">
+          <div class="pill">Hồ sơ hiện tại</div>
+          <div id="profileSummary" class="muted" style="margin-top: 8px;"></div>
+          <div class="actions">
+            <button class="btn-success" onclick="goToSurvey()">Cập nhật hồ sơ</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="pill">Mục tiêu hôm nay</div>
+          <div id="targetSummary" class="muted" style="margin-top: 8px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section quick-section">
+      <h3>Lựa chọn nhanh</h3>
+      <div class="grid-2">
+        <div class="card card-link food" onclick="goToFood()">
+          <div class="title">Món ăn hôm nay</div>
+          <div class="meta">Xem gợi ý theo nhu cầu và chấm điểm món ăn</div>
+          <div class="badge">Mở trang món ăn</div>
+        </div>
+        <div class="card card-link workout" onclick="goToWorkout()">
+          <div class="title">Bài tập hôm nay</div>
+          <div class="meta">Xem gợi ý bài tập hôm nay và ghi nhận calo đốt cháy</div>
+          <div class="badge">Mở trang bài tập</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section calendar-section">
+      <div class="calendar-header">
+        <h3>Lịch hoạt động</h3>
+        <div class="calendar-actions">
+          <button class="btn-light" onclick="changeCalendarMonth(-1)">Tháng trước</button>
+          <span id="calendarMonthLabel" class="calendar-month"></span>
+          <button class="btn-light" onclick="changeCalendarMonth(1)">Tháng sau</button>
+        </div>
+      </div>
+      <div class="calendar-legend muted">
+        <span><i class="dot food-dot"></i> Có đánh giá món ăn</span>
+        <span><i class="dot workout-dot"></i> Có đánh giá bài tập</span>
+      </div>
+      <div id="activityCalendar" class="activity-calendar"></div>
+    </section>
+
+    <section class="section today-section">
+      <h3>Thống kê hôm nay</h3>
+      <div class="grid-2">
+        <div class="card">
+          <div class="pill">Calo đã nạp</div>
+          <div id="foodSummary" class="muted" style="margin-top: 8px;"></div>
+          <div id="foodList" class="list" style="margin-top: 10px;"></div>
+        </div>
+        <div class="card">
+          <div class="pill">Bài tập đã tập</div>
+          <div id="workoutSummary" class="muted" style="margin-top: 8px;"></div>
+          <div id="workoutList" class="list" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/overview.js"></script>
+</body>
+</html>
+

@@ -9,7 +9,9 @@ import java.util.List;
 public interface InteractionLogRepository extends JpaRepository<InteractionLog, Long> {
     // Lấy tất cả tương tác để nạp vào ma trận tính toán
     List<InteractionLog> findAllByFoodIdIsNotNull();
+    List<InteractionLog> findAllByFoodIdIsNotNullAndRatingIsNotNull();
 
     List<InteractionLog> findByUserId (Long userID);
+    List<InteractionLog> findByUserIdAndRatingIsNotNull(Long userId);
     boolean existsByUserId (Long userId);
 }

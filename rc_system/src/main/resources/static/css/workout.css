@@ -1,0 +1,143 @@
+:root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+    .navbar {
+      min-height: 66px; padding: 0 24px; background: #31598b; color: #fff;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    .nav-left, .nav-right { display: flex; align-items: center; gap: 4px; }
+    .nav-logo {
+      width: 42px; height: 42px; margin-right: 10px; border-radius: 12px; background: #fff;
+      color: #31598b; display: grid; place-items: center; text-decoration: none;
+    }
+    .nav-logo svg { width: 28px; height: 28px; stroke: currentColor; stroke-width: 3; fill: none; }
+    .nav-link { color: #fff; padding: 10px 12px; border-radius: 6px; text-decoration: none; font-size: 15px; }
+    .nav-link:hover { background: rgba(255,255,255,0.12); }
+    .nav-user { color: #e5eef9; font-size: 14px; padding: 0 8px; }
+    .container { padding: 20px 24px 32px; max-width: 1240px; margin: 0 auto; }
+    .section {
+      background: var(--card); border: 1px solid var(--border); padding: 16px; border-radius: 12px;
+      box-shadow: var(--shadow); margin-bottom: 16px;
+    }
+    .section h3 { margin: 0 0 10px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+    .summary-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .summary-card strong { display: block; margin-top: 5px; font-size: 18px; }
+    .progress { height: 12px; margin: 12px 0 8px; overflow: hidden; border-radius: 999px; background: #e5e7eb; }
+    .progress-bar { height: 100%; background: var(--success); transition: width 0.25s ease; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .card { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: #fff; }
+    .workout-preview {
+      display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 8px;
+      background: #111827; margin-bottom: 10px; cursor: pointer;
+    }
+    .workout-title { margin-top: 7px; font-weight: 700; }
+    .pill { display: inline-block; padding: 4px 8px; font-size: 12px; border-radius: 999px; background: #dcfce7; color: #15803d; }
+    .phase { margin-left: 5px; background: #eff6ff; color: #1d4ed8; }
+    .muted { color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
+    button {
+      cursor: pointer; background: var(--primary); color: #fff; border: 0; padding: 8px 10px;
+      border-radius: 8px; transition: background 0.2s ease; white-space: nowrap;
+    }
+    button:hover { background: var(--primary-dark); }
+    button:disabled { cursor: default; background: #9ca3af; }
+    .btn-success { background: var(--success); }
+    .btn-success:hover { background: #15803d; }
+    .btn-light { background: #eff6ff; color: #1d4ed8; }
+    .btn-light:hover { background: #dbeafe; }
+    .safety-alert {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      border: 1px solid #facc15;
+      border-radius: 12px;
+      background: #fffbeb;
+      color: #713f12;
+      line-height: 1.45;
+    }
+    .safety-alert strong { display: block; margin-bottom: 4px; }
+    .safety-alert p { margin: 0; font-size: 13px; }
+    .safety-alert button { flex: 0 0 auto; }
+    .safety-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.62);
+      backdrop-filter: blur(4px);
+    }
+    .safety-gate.open { display: flex; }
+    .safety-gate-card {
+      width: min(560px, 100%);
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+      border: 1px solid #fde68a;
+    }
+    .safety-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      font-weight: 900;
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+    .safety-gate-card h3 { margin: 0 0 10px; font-size: 22px; }
+    .safety-gate-card p { margin: 0 0 14px; color: var(--muted); line-height: 1.55; }
+    .safety-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid #fde68a;
+      border-radius: 12px;
+      background: #fffbeb;
+      color: #713f12;
+      cursor: pointer;
+    }
+    .safety-check input { margin-top: 3px; }
+    .safety-message { min-height: 18px; margin-top: 9px; color: #dc2626; font-size: 13px; }
+    .safety-reminder {
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      background: #fffbeb;
+      color: #854d0e;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .rating { display: flex; gap: 4px; margin-top: 9px; }
+    .rating button { padding: 6px 8px; background: #f59e0b; }
+    .list { display: grid; gap: 8px; }
+    .list-item { border: 1px solid var(--border); border-radius: 10px; padding: 9px; }
+    .modal {
+      position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center;
+      padding: 20px; background: rgba(15, 23, 42, 0.68);
+    }
+    .modal.open { display: flex; }
+    .modal-card { width: min(820px, 100%); max-height: 90vh; overflow: auto; border-radius: 14px; background: #fff; padding: 16px; }
+    .modal-video { display: block; width: 100%; max-height: 62vh; object-fit: contain; border-radius: 10px; background: #111827; }
+    .modal-title { margin: 14px 0 5px; font-size: 20px; font-weight: 700; }

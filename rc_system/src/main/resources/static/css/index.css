@@ -1,0 +1,190 @@
+:root {
+      --text: #111827;
+      --border: #e5e7eb;
+      --primary: #31598b;
+      --primary-dark: #24466f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #fff;
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    .navbar {
+      min-height: 92px;
+      padding: 0 44px;
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 28px;
+      border-bottom: 1px solid var(--primary-dark);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 46px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .nav-menu,
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .nav-logo {
+      width: 74px;
+      height: 64px;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      text-decoration: none;
+      flex: 0 0 auto;
+    }
+
+    .nav-logo svg {
+      width: 64px;
+      height: 44px;
+      stroke: currentColor;
+      stroke-width: 3.5;
+      fill: none;
+    }
+
+    .nav-link {
+      color: #fff;
+      padding: 12px 0;
+      text-decoration: none;
+      font-size: clamp(17px, 1.4vw, 24px);
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+
+    .nav-link:hover {
+      text-decoration: underline;
+      text-underline-offset: 8px;
+    }
+
+    .auth-link {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .hero {
+      position: relative;
+      width: 100%;
+      overflow: visible;
+      background: #fff;
+    }
+
+    .hero-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .hero-content {
+      position: absolute;
+      left: clamp(28px, 6vw, 108px);
+      bottom: clamp(42px, 9vw, 110px);
+      max-width: 720px;
+      color: #111;
+    }
+
+    .hero-title {
+      display: inline;
+      padding: 4px 10px;
+      background: #fff;
+      font-size: clamp(32px, 4vw, 58px);
+      line-height: 1.16;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+
+    .hero-subtitle {
+      display: table;
+      margin: 14px 0 0;
+      padding: 5px 9px;
+      background: #fff;
+      color: #111;
+      font-size: clamp(18px, 2vw, 28px);
+      line-height: 1.35;
+      font-weight: 500;
+    }
+
+    .cta {
+      display: inline-block;
+      margin-top: 30px;
+      padding: 23px 30px;
+      background: #fff;
+      color: #111;
+      text-decoration: none;
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 900;
+      box-shadow: 7px 7px 0 #111;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .cta:hover {
+      transform: translate(3px, 3px);
+      box-shadow: 4px 4px 0 #111;
+    }
+
+    @media (max-width: 900px) {
+      .navbar {
+        min-height: auto;
+        padding: 16px 20px;
+        align-items: flex-start;
+      }
+
+      .nav-left {
+        align-items: flex-start;
+        gap: 18px;
+      }
+
+      .nav-menu {
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .nav-logo {
+        width: 56px;
+        height: 48px;
+      }
+
+      .nav-logo svg {
+        width: 48px;
+        height: 34px;
+      }
+
+      .nav-link {
+        font-size: 16px;
+      }
+
+      .hero,
+      .hero-image {
+        min-height: 0;
+        height: auto;
+      }
+
+      .hero-content {
+        right: 22px;
+      }
+    }

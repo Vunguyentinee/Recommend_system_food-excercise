@@ -6,11 +6,14 @@ import com.ptit.rc_system.dto.FoodPortion;
 import com.ptit.rc_system.entity.Food;
 import com.ptit.rc_system.repository.FoodRepository;
 import com.ptit.rc_system.service.AiRecommendationClient;
-import com.ptit.rc_system.service.CollaborativeFilteringService;
-import com.ptit.rc_system.service.NutritionService;
+import com.ptit.rc_system.service.FoodCollaborativeFilteringService;
+import com.ptit.rc_system.service.NutritionCalculationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,7 +24,7 @@ public class NutritionController {
     private static final Logger logger = LoggerFactory.getLogger(NutritionController.class);
 
     @Autowired
-    private NutritionService nutritionService;
+    private NutritionCalculationService nutritionService;
 
     @Autowired
     private FoodRepository foodRepository;
@@ -33,7 +36,10 @@ public class NutritionController {
     private InteractionLogRepository interactionLogRepository;
 
     @Autowired
-    private CollaborativeFilteringService collaborativeFilteringService;
+    private FoodCollaborativeFilteringService collaborativeFilteringService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     // ===== ENDPOINT 1: User-Based CF =====
     @GetMapping("/api/recommend-cf")
@@ -195,6 +201,10 @@ public class NutritionController {
             boolean userExists = interactionLogRepository.existsByUserId(userId);
             if (userExists) {
                 logger.info("✅ CASE 1: Old User + Full Profile → Triple Hybrid (60% CF + 40% CB)");
+                double bmr = nutritionService.calculateBMR(weight, height, age, gender);
+                double tdee = nutritionService.calculateTDEE(bmr, activityLevel);
+                double targetCalories = nutritionService
+                        .caculateTargetCalories(tdee, healthGoal, gender);
                 Object response = recommendTripleHybrid(userId, weight, height, age, gender,
                         activityLevel, healthGoal, isTraditional, topK);
 
@@ -203,7 +213,8 @@ public class NutritionController {
                 @SuppressWarnings("unchecked")
                 List<Food> data = (List<Food>) responseMap.getOrDefault("data", List.of());
 
-                Map<String, List<Map<String, Object>>> meals = buildDailyPlan(data, foodRepository.findAll());
+                Map<String, List<Map<String, Object>>> meals = buildDailyPlan(
+                        data, foodRepository.findAll(), targetCalories);
                 List<Map<String, Object>> flat = flattenMeals(meals);
                 if (!flat.isEmpty()) {
                     Map<String, Object> payload = createResponse(flat, "TRIPLE_HYBRID_DAILY", topK);
@@ -211,14 +222,11 @@ public class NutritionController {
                     return payload;
                 }
 
-                double bmr = nutritionService.calculateBMR(weight, height, age, gender);
-                double tdee = nutritionService.calculateTDEE(bmr, activityLevel);
-                double targetCalories = nutritionService
-                        .caculateTargetCalories(tdee, healthGoal, gender);
                 List<FoodPortion> fallback = nutritionService
                         .generateLunchCombo(targetCalories, foodRepository.findAll(), isTraditional);
                 List<Food> fallbackFoods = fallback.stream().map(FoodPortion::getFood).toList();
-                Map<String, List<Map<String, Object>>> fallbackMeals = buildDailyPlan(fallbackFoods, foodRepository.findAll());
+                Map<String, List<Map<String, Object>>> fallbackMeals = buildDailyPlan(
+                        fallbackFoods, foodRepository.findAll(), targetCalories);
                 Map<String, Object> payload = createResponse(flattenMeals(fallbackMeals), "CONTENT_BASED_FOR_MEAL_STYLE", topK);
                 payload.put("meals", fallbackMeals);
                 return payload;
@@ -269,7 +277,8 @@ public class NutritionController {
             List<FoodPortion> result = nutritionService.generateLunchCombo(targetCalories, allFoods, isTraditional);
             List<Food> candidateFoods = result.stream().map(FoodPortion::getFood).toList();
 
-            Map<String, List<Map<String, Object>>> meals = buildDailyPlan(candidateFoods, allFoods);
+            Map<String, List<Map<String, Object>>> meals = buildDailyPlan(
+                    candidateFoods, allFoods, targetCalories);
             Map<String, Object> payload = createResponse(flattenMeals(meals), "CONTENT_BASED_DAILY", topK);
             payload.put("meals", meals);
             return payload;
@@ -328,7 +337,7 @@ public class NutritionController {
 
         logger.info("📊 Checking if user {} can use CF", userId);
 
-        long ratingCount = interactionLogRepository.findByUserId(userId).size();
+        long ratingCount = interactionLogRepository.findByUserIdAndRatingIsNotNull(userId).size();
         logger.info("User {} has {} ratings", userId, ratingCount);
 
         if (ratingCount >= 3) {
@@ -346,6 +355,69 @@ public class NutritionController {
             List<Long> popularFoods = getPopularFoods(topK);
             return createResponse(foodRepository.findAllById(popularFoods), "POPULARITY_CONTINUE", topK);
         }
+    }
+
+    // ===== ENDPOINT 9: Health Profile =====
+    @GetMapping("/api/health-profiles/{userId}")
+    public ResponseEntity<Map<String, Object>> getHealthProfile(@PathVariable Long userId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT TOP 1 ProfileID AS profileId, UserID AS userId, Height AS height, Weight AS weight, "
+                        + "Age AS age, Gender AS gender, Activity_Level AS activityLevel, Health_goal AS healthGoal, "
+                        + "BMI AS bmi, TDEE AS tdee, Target_Calories AS targetCalories, Last_updated AS lastUpdated, "
+                        + "Fitness_Level AS fitnessLevel "
+                        + "FROM Health_Profiles WHERE UserID = ?",
+                userId
+        );
+        if (rows.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        return ResponseEntity.ok(rows.get(0));
+    }
+
+    @PostMapping("/api/health-profiles")
+    public ResponseEntity<Map<String, Object>> upsertHealthProfile(@RequestBody HealthProfilePayload payload) {
+        if (payload.userId == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
+        double bmr = nutritionService.calculateBMR(
+                safeDouble(payload.weight),
+                safeDouble(payload.height),
+                safeInt(payload.age),
+                payload.gender == null ? "male" : payload.gender
+        );
+        double tdee = nutritionService.calculateTDEE(bmr, safeDouble(payload.activityLevel));
+        double targetCalories = nutritionService.caculateTargetCalories(tdee, payload.healthGoal, payload.gender);
+        Double bmi = calculateBmi(payload.weight, payload.height);
+        String fitnessLevel = normalizeFitnessLevel(payload.fitnessLevel);
+
+        Integer existing = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM Health_Profiles WHERE UserID = ?",
+                Integer.class,
+                payload.userId
+        );
+
+        if (existing != null && existing > 0) {
+            jdbcTemplate.update(
+                    "UPDATE Health_Profiles SET Height = ?, Weight = ?, Age = ?, Gender = ?, Activity_Level = ?, "
+                            + "Health_goal = ?, BMI = ?, TDEE = ?, Target_Calories = ?, Last_updated = ?, "
+                            + "Fitness_Level = ? WHERE UserID = ?",
+                    payload.height, payload.weight, payload.age, payload.gender, payload.activityLevel,
+                    payload.healthGoal, bmi, tdee, targetCalories, new Date(),
+                    fitnessLevel, payload.userId
+            );
+        } else {
+            jdbcTemplate.update(
+                    "INSERT INTO Health_Profiles (UserID, Height, Weight, Age, Gender, Activity_Level, Health_goal, "
+                            + "BMI, TDEE, Target_Calories, Last_updated, Fitness_Level) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    payload.userId, payload.height, payload.weight, payload.age, payload.gender, payload.activityLevel,
+                    payload.healthGoal, bmi, tdee, targetCalories, new Date(),
+                    fitnessLevel
+            );
+        }
+
+        return getHealthProfile(payload.userId);
     }
 
     // ===== HELPER METHOD: Triple Hybrid =====
@@ -398,6 +470,46 @@ public class NutritionController {
         return createResponse(result, "TRIPLE_HYBRID", topK);
     }
 
+    private Double calculateBmi(Double weight, Double height) {
+        if (weight == null || height == null || height <= 0) {
+            return null;
+        }
+        double heightMeters = height / 100.0;
+        return weight / (heightMeters * heightMeters);
+    }
+
+    private double safeDouble(Double value) {
+        return value == null ? 0.0 : value;
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private String normalizeFitnessLevel(String fitnessLevel) {
+        if (fitnessLevel == null || fitnessLevel.isBlank()) {
+            return "Beginner";
+        }
+        if (fitnessLevel.equalsIgnoreCase("Intermediate")) {
+            return "Intermediate";
+        }
+        if (fitnessLevel.equalsIgnoreCase("Advanced")) {
+            return "Advanced";
+        }
+        return "Beginner";
+    }
+
+    public static class HealthProfilePayload {
+        public Long userId;
+        public Double height;
+        public Double weight;
+        public Integer age;
+        public String gender;
+        public Double activityLevel;
+        public String healthGoal;
+        public String fitnessLevel;
+    }
+
     // ===== ✅ HELPER: Popularity-Based Fallback =====
     private List<Long> getPopularFoods(int topK) {
         logger.info("📊 Getting popular foods");
@@ -445,6 +557,23 @@ public class NutritionController {
         return response;
     }
 
+    private String normalizeMealTime(String value) {
+        if (value == null || value.isBlank()) {
+            return "Unknown";
+        }
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        if (normalized.contains("sang") || normalized.contains("breakfast")) {
+            return "Breakfast";
+        }
+        if (normalized.contains("trua") || normalized.contains("lunch")) {
+            return "Lunch";
+        }
+        if (normalized.contains("toi") || normalized.contains("dinner")) {
+            return "Dinner";
+        }
+        return value.trim();
+    }
+
     private Map<String, Object> createErrorResponse(String message, String errorCode) {
         Map<String, Object> response = new HashMap<>();
         response.put("error", message);
@@ -454,39 +583,10 @@ public class NutritionController {
         return response;
     }
 
-    // ===== API: Save Rating =====
-    @PostMapping("/api/rate-food")
-    public Object rateFood(
-            @RequestParam Long userId,
-            @RequestParam Long foodId,
-            @RequestParam Double rating) {
-
-        if (rating < 0 || rating > 5) {
-            logger.warn("❌ Invalid rating: {}", rating);
-            return createErrorResponse("Rating must be between 0-5", "INVALID_RATING");
-        }
-
-        InteractionLog log = new InteractionLog();
-        log.setUserId(userId);
-        log.setFoodId(foodId);
-        log.setRating(rating);
-
-        InteractionLog saved = interactionLogRepository.save(log);
-        logger.info("💾 Saved rating: userId={}, foodId={}, rating={}", userId, foodId, rating);
-
-        return Map.of(
-                "logId", saved.getLogId(),
-                "userId", userId,
-                "foodId", foodId,
-                "rating", rating,
-                "message", "Rating saved successfully"
-        );
-    }
-
     // ===== API: Get User Rating History =====
     @GetMapping("/api/user-ratings/{userId}")
     public Object getUserRatings(@PathVariable Long userId) {
-        List<InteractionLog> logs = interactionLogRepository.findByUserId(userId);
+        List<InteractionLog> logs = interactionLogRepository.findByUserIdAndRatingIsNotNull(userId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("userId", userId);
@@ -503,7 +603,7 @@ public class NutritionController {
     // ===== API: Get Recommendation Status =====
     @GetMapping("/api/user-status/{userId}")
     public Object getUserStatus(@PathVariable Long userId) {
-        List<InteractionLog> logs = interactionLogRepository.findByUserId(userId);
+        List<InteractionLog> logs = interactionLogRepository.findByUserIdAndRatingIsNotNull(userId);
         boolean userExists = !logs.isEmpty();
 
         Map<String, Object> response = new HashMap<>();
@@ -703,6 +803,11 @@ public class NutritionController {
     }
 
     private Map<String, List<Map<String, Object>>> buildDailyPlan(List<Food> candidates, List<Food> fallbackFoods) {
+        return buildDailyPlan(candidates, fallbackFoods, null);
+    }
+
+    private Map<String, List<Map<String, Object>>> buildDailyPlan(List<Food> candidates, List<Food> fallbackFoods,
+                                                                  Double targetCalories) {
         Set<Long> usedIds = new HashSet<>();
         Map<String, List<Map<String, Object>>> meals = new LinkedHashMap<>();
 
@@ -711,14 +816,83 @@ public class NutritionController {
         boolean isLunchTraditional = !"lunch".equals(mixedMealKey);
         boolean isDinnerTraditional = !"dinner".equals(mixedMealKey);
 
-        List<Map<String, Object>> breakfast = buildMealPlan("breakfast", isBreakfastTraditional, candidates, fallbackFoods, usedIds);
-        List<Map<String, Object>> lunch = buildMealPlan("lunch", isLunchTraditional, candidates, fallbackFoods, usedIds);
-        List<Map<String, Object>> dinner = buildMealPlan("dinner", isDinnerTraditional, candidates, fallbackFoods, usedIds);
+        List<Map<String, Object>> breakfast = buildMealPlan(
+                "breakfast", isBreakfastTraditional, candidates, fallbackFoods, usedIds,
+                calculateMealTargetCalories(targetCalories, 0.30));
+        List<Map<String, Object>> lunch = buildMealPlan(
+                "lunch", isLunchTraditional, candidates, fallbackFoods, usedIds,
+                calculateMealTargetCalories(targetCalories, 0.40));
+        List<Map<String, Object>> dinner = buildMealPlan(
+                "dinner", isDinnerTraditional, candidates, fallbackFoods, usedIds,
+                calculateMealTargetCalories(targetCalories, 0.30));
 
         meals.put("breakfast", breakfast);
         meals.put("lunch", lunch);
         meals.put("dinner", dinner);
+        rebalanceDailyCalories(meals, targetCalories);
         return meals;
+    }
+
+    private Double calculateMealTargetCalories(Double targetCalories, double ratio) {
+        return targetCalories == null ? null : targetCalories * ratio;
+    }
+
+    private double roundToOneDecimal(double value) {
+        return Math.round(value * 10.0) / 10.0;
+    }
+
+    private double roundToHalf(double value) {
+        return Math.round(value * 2.0) / 2.0;
+    }
+
+    private void rebalanceDailyCalories(Map<String, List<Map<String, Object>>> meals, Double targetCalories) {
+        if (targetCalories == null) return;
+
+        List<Map<String, Object>> foods = flattenMeals(meals);
+        double totalCalories = calculateTotalCalories(foods);
+
+        while (true) {
+            PortionAdjustment bestAdjustment = null;
+            double currentDifference = Math.abs(targetCalories - totalCalories);
+
+            for (Map<String, Object> food : foods) {
+                double currentPortion = ((Number) food.get("portionMultiplier")).doubleValue();
+                double baseCalories = ((Number) food.get("baseCalories")).doubleValue();
+                double maxPortion = maxPortionMultiplierForCategory((String) food.get("category"));
+
+                for (double nextPortion : new double[]{currentPortion - 0.5, currentPortion + 0.5}) {
+                    if (nextPortion < 0.5 || nextPortion > maxPortion) continue;
+
+                    double nextCalories = roundToOneDecimal(baseCalories * nextPortion);
+                    double nextTotal = totalCalories - ((Number) food.get("calories")).doubleValue() + nextCalories;
+                    double nextDifference = Math.abs(targetCalories - nextTotal);
+                    if (nextDifference < currentDifference
+                            && (bestAdjustment == null || nextDifference < bestAdjustment.difference())) {
+                        bestAdjustment = new PortionAdjustment(food, nextPortion, nextCalories, nextTotal, nextDifference);
+                    }
+                }
+            }
+
+            if (bestAdjustment == null) return;
+            bestAdjustment.food().put("portionMultiplier", bestAdjustment.portionMultiplier());
+            bestAdjustment.food().put("calories", bestAdjustment.calories());
+            totalCalories = bestAdjustment.totalCalories();
+        }
+    }
+
+    private double calculateTotalCalories(List<Map<String, Object>> foods) {
+        return foods.stream()
+                .mapToDouble(food -> ((Number) food.get("calories")).doubleValue())
+                .sum();
+    }
+
+    private double maxPortionMultiplierForCategory(String category) {
+        if ("Món đạm".equalsIgnoreCase(category)
+                || "Món rau".equalsIgnoreCase(category)
+                || "Món hoa quả".equalsIgnoreCase(category)) {
+            return 1.5;
+        }
+        return 2.0;
     }
 
     private String pickRandomMixedMealKey() {
@@ -728,23 +902,35 @@ public class NutritionController {
 
     private List<Map<String, Object>> buildMealPlan(String mealKey, boolean isTraditional,
                                                     List<Food> candidates, List<Food> fallbackFoods,
-                                                    Set<Long> usedIds) {
+                                                    Set<Long> usedIds, Double mealTargetCalories) {
         List<Map<String, Object>> result = new ArrayList<>();
 
         if (isTraditional) {
-            Food carb = pickFoodByCategory(mealKey, "Món tinh bột", candidates, fallbackFoods, usedIds);
-            Food protein = pickFoodByCategory(mealKey, "Món đạm", candidates, fallbackFoods, usedIds);
-            Food veg = pickFoodByCategory(mealKey, "Món rau", candidates, fallbackFoods, usedIds);
+            SelectedFood carb = pickFoodByCategory(
+                    mealKey, "Món tinh bột", candidates, fallbackFoods, usedIds,
+                    calculateCategoryTargetCalories(mealTargetCalories, 0.45), 2.0);
+            SelectedFood protein = pickFoodByCategory(
+                    mealKey, "Món đạm", candidates, fallbackFoods, usedIds,
+                    calculateCategoryTargetCalories(mealTargetCalories, 0.35), 1.5);
+            SelectedFood veg = pickFoodByCategory(
+                    mealKey, "Món rau", candidates, fallbackFoods, usedIds,
+                    calculateCategoryTargetCalories(mealTargetCalories, 0.20), 1.5);
             if (veg == null) {
-                veg = pickFoodByCategory(mealKey, "Món hoa quả", candidates, fallbackFoods, usedIds);
+                veg = pickFoodByCategory(
+                        mealKey, "Món hoa quả", candidates, fallbackFoods, usedIds,
+                        calculateCategoryTargetCalories(mealTargetCalories, 0.20), 1.5);
             }
 
             addIfPresent(result, carb, mealKey, usedIds);
             addIfPresent(result, protein, mealKey, usedIds);
             addIfPresent(result, veg, mealKey, usedIds);
         } else {
-            Food mixed = pickFoodByCategory(mealKey, "Món hỗn hợp", candidates, fallbackFoods, usedIds);
-            Food water = pickFoodByCategory(mealKey, "Món nước", candidates, fallbackFoods, usedIds);
+            SelectedFood mixed = pickFoodByCategory(
+                    mealKey, "Món hỗn hợp", candidates, fallbackFoods, usedIds,
+                    calculateCategoryTargetCalories(mealTargetCalories, 0.85), 2.0);
+            SelectedFood water = pickFoodByCategory(
+                    mealKey, "Món nước", candidates, fallbackFoods, usedIds,
+                    calculateCategoryTargetCalories(mealTargetCalories, 0.15), 2.0);
 
             addIfPresent(result, mixed, mealKey, usedIds);
             addIfPresent(result, water, mealKey, usedIds);
@@ -753,27 +939,55 @@ public class NutritionController {
         return result;
     }
 
-    private Food pickFoodByCategory(String mealKey, String category,
-                                    List<Food> primary, List<Food> fallback,
-                                    Set<Long> usedIds) {
-        Food picked = findFirstMatching(mealKey, category, primary, usedIds, true);
-        if (picked != null) return picked;
-        return findFirstMatching(mealKey, category, fallback, usedIds, true);
+    private Double calculateCategoryTargetCalories(Double mealTargetCalories, double ratio) {
+        return mealTargetCalories == null ? null : mealTargetCalories * ratio;
     }
 
-    private Food findFirstMatching(String mealKey, String category, List<Food> foods,
-                                   Set<Long> usedIds, boolean strictMealMatch) {
+    private SelectedFood pickFoodByCategory(String mealKey, String category,
+                                            List<Food> primary, List<Food> fallback,
+                                            Set<Long> usedIds, Double targetCalories,
+                                            double maxPortionMultiplier) {
+        SelectedFood picked = findBestMatching(
+                mealKey, category, primary, usedIds, targetCalories, maxPortionMultiplier);
+        if (picked != null) return picked;
+        return findBestMatching(
+                mealKey, category, fallback, usedIds, targetCalories, maxPortionMultiplier);
+    }
+
+    private SelectedFood findBestMatching(String mealKey, String category, List<Food> foods,
+                                          Set<Long> usedIds, Double targetCalories,
+                                          double maxPortionMultiplier) {
+        SelectedFood bestMatch = null;
+        double bestDifference = Double.MAX_VALUE;
         for (Food food : foods) {
             if (food == null || usedIds.contains(food.getId())) continue;
             if (category != null && (food.getCategory() == null || !food.getCategory().equalsIgnoreCase(category))) {
                 continue;
             }
-            if (strictMealMatch && !matchesMealType(food, mealKey)) {
+            if (!matchesMealType(food, mealKey)) {
                 continue;
             }
-            return food;
+            if (food.getCalories() == null || food.getCalories() <= 0) {
+                continue;
+            }
+
+            double portionMultiplier = targetCalories == null
+                    ? 1.0
+                    : roundToHalf(targetCalories / food.getCalories());
+            if (portionMultiplier < 0.5 || portionMultiplier > maxPortionMultiplier) {
+                continue;
+            }
+
+            double adjustedCalories = food.getCalories() * portionMultiplier;
+            double difference = targetCalories == null
+                    ? 0.0
+                    : Math.abs(targetCalories - adjustedCalories);
+            if (difference < bestDifference) {
+                bestMatch = new SelectedFood(food, portionMultiplier, roundToOneDecimal(adjustedCalories));
+                bestDifference = difference;
+            }
         }
-        return null;
+        return bestMatch;
     }
 
     private boolean matchesMealType(Food food, String mealKey) {
@@ -781,24 +995,86 @@ public class NutritionController {
         return food.getMealType().toLowerCase().contains(mealKey.toLowerCase());
     }
 
-    private void addIfPresent(List<Map<String, Object>> target, Food food, String mealKey, Set<Long> usedIds) {
-        if (food == null) return;
-        usedIds.add(food.getId());
-        target.add(toMealFoodPayload(food, mealKey));
+    private void addIfPresent(List<Map<String, Object>> target, SelectedFood selectedFood,
+                              String mealKey, Set<Long> usedIds) {
+        if (selectedFood == null) return;
+        usedIds.add(selectedFood.food().getId());
+        target.add(toMealFoodPayload(selectedFood, mealKey));
     }
 
-    private Map<String, Object> toMealFoodPayload(Food food, String mealKey) {
+    private Map<String, Object> toMealFoodPayload(SelectedFood selectedFood, String mealKey) {
+        Food food = selectedFood.food();
         Map<String, Object> payload = new HashMap<>();
         payload.put("id", food.getId());
         payload.put("name", food.getName());
         payload.put("category", food.getCategory());
-        payload.put("calories", food.getCalories());
+        payload.put("baseCalories", food.getCalories());
+        payload.put("portionMultiplier", selectedFood.portionMultiplier());
+        payload.put("calories", selectedFood.adjustedCalories());
         payload.put("protein", food.getProtein());
         payload.put("carbs", food.getCarbs());
         payload.put("fat", food.getFat());
         payload.put("servingUnit", food.getServingUnit());
         payload.put("mealType", capitalizeMeal(mealKey));
         return payload;
+    }
+
+    public Map<String, Object> loadLatestProfileForPlan(Long userId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT TOP 1 Weight AS weight, Height AS height, Age AS age, Gender AS gender, "
+                        + "Activity_Level AS activityLevel, Health_goal AS healthGoal, "
+                        + "Target_Calories AS targetCalories "
+                        + "FROM Health_Profiles WHERE UserID = ? "
+                        + "ORDER BY Last_updated DESC, ProfileID DESC",
+                userId
+        );
+        return rows.isEmpty() ? Map.of() : rows.get(0);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, List<Map<String, Object>>> generateMealsForUser(Long userId, Map<String, Object> profile) {
+        Object response = recommendSmart(
+                userId,
+                numberOrNull(profile.get("weight")),
+                numberOrNull(profile.get("height")),
+                integerOrNull(profile.get("age")),
+                stringOrNull(profile.get("gender")),
+                numberOrNull(profile.get("activityLevel")),
+                stringOrNull(profile.get("healthGoal")),
+                true,
+                9
+        );
+        Map<String, Object> responseMap = response instanceof ResponseEntity<?> entity
+                ? (Map<String, Object>) entity.getBody()
+                : (Map<String, Object>) response;
+        Object meals = responseMap.get("meals");
+        if (meals instanceof Map<?, ?> mealMap) {
+            Map<String, List<Map<String, Object>>> typedMeals = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : mealMap.entrySet()) {
+                typedMeals.put(String.valueOf(entry.getKey()), (List<Map<String, Object>>) entry.getValue());
+            }
+            return typedMeals;
+        }
+        return buildDailyPlan(foodRepository.findAll().stream().limit(9).toList(), foodRepository.findAll());
+    }
+
+    private Double numberOrNull(Object value) {
+        return value instanceof Number number ? number.doubleValue() : null;
+    }
+
+    private Integer integerOrNull(Object value) {
+        return value instanceof Number number ? number.intValue() : null;
+    }
+
+    private String stringOrNull(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private record SelectedFood(Food food, double portionMultiplier, double adjustedCalories) {
+    }
+
+    private record PortionAdjustment(Map<String, Object> food, double portionMultiplier, double calories,
+                                     double totalCalories, double difference) {
     }
 
     private String capitalizeMeal(String mealKey) {

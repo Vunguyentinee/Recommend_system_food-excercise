@@ -4,62 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>API Test Console</title>
-  <style>
-    :root {
-      --bg: #f5f7fb;
-      --card: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-      --primary: #2563eb;
-      --primary-dark: #1d4ed8;
-      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-    }
-    header {
-      padding: 20px 24px;
-      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-      color: #fff;
-    }
-    header h2 { margin: 0; font-weight: 600; }
-    .container { padding: 20px 24px 32px; max-width: 1100px; margin: 0 auto; }
-    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
-    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-    input, select, button, textarea {
-      font-size: 14px;
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #fff;
-    }
-    input, select { width: 100%; }
-    textarea { width: 100%; height: 240px; font-family: Consolas, monospace; }
-    button {
-      cursor: pointer;
-      background: var(--primary);
-      color: #fff;
-      border: 0;
-      transition: background 0.2s ease;
-      white-space: nowrap;
-    }
-    button:hover { background: var(--primary-dark); }
-    .section {
-      background: var(--card);
-      border: 1px solid var(--border);
-      padding: 16px;
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-      margin-bottom: 16px;
-    }
-    .muted { color: var(--muted); font-size: 12px; }
-    .button-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-  </style>
+  <link rel="stylesheet" href="css/test.css">
 </head>
 <body>
   <header>
@@ -150,9 +95,9 @@
         <button onclick="callEndpoint('user-ratings')">user-ratings</button>
         <button onclick="callEndpoint('debug-cf-status')">debug-cf-status</button>
         <button onclick="callEndpoint('debug-cf-detailed')">debug-cf-detailed</button>
-        <button onclick="callEndpoint('rate-food')">rate-food (POST)</button>
+        <button onclick="callEndpoint('nutrition-favorites')">nutrition-favorites (POST)</button>
       </div>
-      <div class="muted">Response shows JSON from the backend. If rate-food fails, check FK user in dbo.Users.</div>
+      <div class="muted">Response shows JSON from the backend. If nutrition-favorites fails, check FK user in dbo.Users.</div>
     </div>
 
     <div class="section">
@@ -161,103 +106,7 @@
     </div>
   </div>
 
-  <script>
-    function getValue(id) {
-      return document.getElementById(id).value;
-    }
-
-    function buildUrl(path, params) {
-      const baseUrl = getValue('baseUrl');
-      const url = new URL(baseUrl + path);
-      Object.keys(params).forEach((key) => {
-        const value = params[key];
-        if (value !== null && value !== undefined && value !== '') {
-          url.searchParams.set(key, value);
-        }
-      });
-      return url.toString();
-    }
-
-    async function request(url, method) {
-      const output = document.getElementById('output');
-      output.value = 'Loading...';
-      try {
-        const response = await fetch(url, { method });
-        const text = await response.text();
-        output.value = text || '<empty response>';
-      } catch (err) {
-        output.value = err.message;
-      }
-    }
-
-    function callEndpoint(type) {
-      const userId = getValue('userId');
-      const topK = getValue('topK');
-      const userWeight = getValue('userWeight');
-      const weight = getValue('weight');
-      const height = getValue('height');
-      const age = getValue('age');
-      const gender = getValue('gender');
-      const activityLevel = getValue('activityLevel');
-      const healthGoal = getValue('healthGoal');
-      const isTraditional = getValue('isTraditional');
-      const foodId = getValue('foodId');
-      const rating = getValue('rating');
-
-      let url = '';
-      let method = 'GET';
-
-      switch (type) {
-        case 'recommend-cf':
-          url = buildUrl('/api/recommend-cf', { userId, topK });
-          break;
-        case 'recommend-cf-item':
-          url = buildUrl('/api/recommend-cf-item', { userId, topK });
-          break;
-        case 'recommend-cf-hybrid':
-          url = buildUrl('/api/recommend-cf-hybrid', { userId, topK, userWeight });
-          break;
-        case 'recommend-tdee':
-          url = buildUrl('/api/recommend-tdee', { weight, height, age, gender, activityLevel, healthGoal, isTraditional });
-          break;
-        case 'recommend-popular':
-          url = buildUrl('/api/recommend-popular', { topK });
-          break;
-        case 'recommend-smart-user':
-          url = buildUrl('/api/recommend-smart', { userId, topK });
-          break;
-        case 'recommend-smart-profile':
-          url = buildUrl('/api/recommend-smart', { weight, height, age, gender, activityLevel, healthGoal, topK, isTraditional });
-          break;
-        case 'onboard':
-          url = buildUrl('/api/onboard/initial-recommendation', { weight, height, age, gender, activityLevel, healthGoal, topK: 10, isTraditional });
-          break;
-        case 'suggest-after-rating':
-          url = buildUrl('/api/suggest-after-rating', { userId, topK });
-          break;
-        case 'user-status':
-          url = buildUrl('/api/user-status/' + encodeURIComponent(userId), {});
-          break;
-        case 'user-ratings':
-          url = buildUrl('/api/user-ratings/' + encodeURIComponent(userId), {});
-          break;
-        case 'debug-cf-status':
-          url = buildUrl('/api/debug/cf-status', { userId });
-          break;
-        case 'debug-cf-detailed':
-          url = buildUrl('/api/debug/cf-detailed', { userId });
-          break;
-        case 'rate-food':
-          url = buildUrl('/api/rate-food', { userId, foodId, rating });
-          method = 'POST';
-          break;
-        default:
-          return;
-      }
-
-      request(url, method);
-    }
-  </script>
+  <script src="js/test.js"></script>
 </body>
 </html>
 

@@ -7,7 +7,7 @@ public class Food {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "FoodID")
+    @Column(name = "FoodID", columnDefinition = "int")
     private Long id;
 
     @Column(name = "Name", columnDefinition = "nvarchar(255)")

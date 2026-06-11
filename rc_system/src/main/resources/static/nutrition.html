@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hệ thống AI dinh dưỡng - Dashboard</title>
+  <link rel="stylesheet" href="css/nutrition.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a class="nav-logo" href="overview.html" title="Tổng quan" aria-label="Tổng quan">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M15 24h18M9 17v14M14 14v20M34 14v20M39 17v14M9 24H5M39 24h4" />
+        </svg>
+      </a>
+      <a class="nav-link" href="nutrition.html">Món ăn</a>
+      <a class="nav-link" href="workout.html">Bài tập</a>
+    </div>
+    <div class="nav-right">
+      <span id="navUser" class="nav-user"></span>
+      <a id="navLogin" class="nav-link" href="login.html">Đăng nhập</a>
+      <a id="navLogout" class="nav-link" href="#" onclick="logout(); return false;">Đăng xuất</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <section id="page-survey" class="section hidden">
+      <h3>Khảo sát thông tin người dùng (Health Profile)</h3>
+      <div class="row">
+        <div><label>Cân nặng(kg)</label><input id="weight" value="65" /></div>
+        <div><label>Chiều cao(cm)</label><input id="height" value="170" /></div>
+        <div><label>Tuổi</label><input id="age" value="25" /></div>
+        <div>
+          <label>Giới tính</label>
+          <select id="gender">
+            <option value="male">Nam</option>
+            <option value="female">Nữ</option>
+          </select>
+        </div>
+        <div>
+          <label>Mức vận động</label>
+          <select id="activityLevel">
+            <option value="1.2"></option>
+            <option value="1.375">Ít vận động</option>
+            <option value="1.55" selected>Vừa</option>
+            <option value="1.725">Vận động nhiều</option>
+          </select>
+        </div>
+        <div>
+          <label>Mục tiêu</label>
+          <select id="healthGoal">
+            <option value="maintain">Giữ dáng</option>
+            <option value="lose">Giảm cân</option>
+            <option value="gain">Tăng cân</option>
+          </select>
+        </div>
+        <div>
+          <label>Trình độ tập luyện</label>
+          <select id="fitnessLevel">
+            <option value="Beginner">Mới bắt đầu</option>
+            <option value="Intermediate">Trung bình</option>
+            <option value="Advanced">Nâng cao</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-success" onclick="saveProfile()">Lưu hồ sơ</button>
+        <button onclick="goToDashboard()">Bỏ qua</button>
+      </div>
+      <div id="surveyMsg" class="muted"></div>
+    </section>
+
+    <section id="page-onboarding" class="section hidden">
+      <h3>Onboarding: Chọn món ăn yêu thích</h3>
+      <div class="actions">
+        <button onclick="loadPopularFoods()">20 món ăn phổ biến</button>
+        <button class="btn-success" onclick="saveFavorites()">Lưu món ăn yêu thích (Rating=5)</button>
+      </div>
+      <div id="popularFoods" class="food-list"></div>
+      <div id="onboardMsg" class="muted"></div>
+    </section>
+
+    <section id="page-dashboard" class="section hidden">
+      <h3>Dashboard</h3>
+      <div class="safety-reminder">
+        Gợi ý món ăn chỉ mang tính tham khảo. Hãy lắng nghe cơ thể của bạn và hỏi chuyên gia nếu có bệnh nền, dị ứng hoặc dấu hiệu bất thường.
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="pill">Tiến trình Calo ngày</div>
+          <div class="progress" style="margin: 10px 0;">
+            <div id="caloBar" class="progress-bar"></div>
+          </div>
+          <div class="muted" id="caloText">Chưa có dữ liệu</div>
+        </div>
+        <div class="card">
+          <div class="pill">Điều khiển</div>
+          <div class="actions">
+            <button onclick="refreshDashboard()">Tải gợi ý mới</button>
+            <button class="btn-warning" onclick="refreshTdee()">Tính lại TDEE</button>
+            <button onclick="goToSurvey()">Cập nhật hồ sơ</button>
+          </div>
+          <div id="dashMsg" class="muted"></div>
+        </div>
+      </div>
+
+      <div class="dashboard-stack">
+        <div class="card">
+          <div class="pill">Bữa sáng </div>
+          <div id="breakfastList" class="food-list"></div>
+        </div>
+        <div class="card">
+          <div class="pill">Bữa trưa </div>
+          <div id="lunchList" class="food-list"></div>
+        </div>
+        <div class="card">
+          <div class="pill">Bữa tối</div>
+          <div id="dinnerList" class="food-list"></div>
+        </div>
+      </div>
+
+      <div class="dashboard-stack">
+        <div class="card">
+          <div class="pill">Bạn đánh giá bữa ăn ngày hôm nay ra sao! </div>
+          <div id="actionFoods" class="food-list"></div>
+        </div>
+      </div>
+
+      <div class="dashboard-stack">
+        <div class="card">
+          <div class="pill">Nhật ký tương tác</div>
+          <textarea id="actionLog" readonly></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-admin" class="section hidden">
+      <h3>Admin Dashboard</h3>
+      <div class="grid-2">
+        <div class="card">
+          <div class="pill">Quản lý kho thực phẩm</div>
+          <div class="row">
+            <div><label>Tên món</label><input id="adminName" /></div>
+            <div><label>Calo</label><input id="adminCalories" /></div>
+            <div><label>Protein</label><input id="adminProtein" /></div>
+            <div><label>Carbs</label><input id="adminCarbs" /></div>
+            <div><label>Fat</label><input id="adminFat" /></div>
+            <div><label>Đơn vị</label><input id="adminUnit" /></div>
+            <div><label>Meal Type</label><input id="adminMealType" /></div>
+            <div>
+              <label>Category</label>
+              <select id="adminCategory">
+                <option value="Món tinh bột">Món tinh bột</option>
+                <option value="Món đạm">Món đạm</option>
+                <option value="Món rau">Món rau</option>
+                <option value="Món hoa quả">Món hoa quả</option>
+                <option value="Món hỗn hợp">Món hỗn hợp</option>
+                <option value="Món nước">Món nước</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-success" onclick="createFood()">Thêm</button>
+            <button onclick="updateFood()">Cập nhật</button>
+            <button class="btn-warning" onclick="deleteFood()">Xóa</button>
+            <button onclick="loadAdminFoods()">Tải danh sách</button>
+          </div>
+          <div id="adminMsg" class="muted"></div>
+        </div>
+        <div class="card">
+          <div class="pill">Danh sách món</div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Tên</th>
+                <th>Calo</th>
+                <th>Category</th>
+                <th>Chọn</th>
+              </tr>
+            </thead>
+            <tbody id="adminFoodTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="nutritionSafetyGate" class="safety-gate" role="dialog" aria-modal="true" aria-labelledby="nutritionSafetyTitle">
+    <div class="safety-gate-card">
+      <div class="safety-icon">!</div>
+      <h3 id="nutritionSafetyTitle">Lưu ý trước khi sử dụng gợi ý món ăn</h3>
+      <p>
+        Hệ khuyến nghị chỉ mang tính trợ giúp, không thay thế bác sĩ hoặc chuyên gia dinh dưỡng.
+        Nếu bạn có bệnh nền, dị ứng thực phẩm, đang điều trị hoặc thấy cơ thể bất thường, hãy điều chỉnh và hỏi chuyên gia.
+      </p>
+      <label class="safety-check">
+        <input id="nutritionSafetyCheck" type="checkbox" />
+        <span>Tôi hiểu rằng gợi ý chỉ mang tính tham khảo và tôi xin nhận hoàn toàn trách nhiệm khi sử dụng.</span>
+      </label>
+      <div id="nutritionSafetyMsg" class="safety-message"></div>
+      <div class="actions">
+        <button class="btn-success" onclick="acceptSafetyGate('nutrition')">Tiếp tục sử dụng</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ratingOverlay" class="overlay">
+    <div class="modal">
+      <h4>Chấm điểm món ăn</h4>
+      <div id="ratingFoodName" class="muted"></div>
+      <div class="stars" id="ratingStars"></div>
+      <div class="actions" style="margin-top: 12px;">
+        <button class="btn-success" onclick="submitRating()">Lưu điểm</button>
+        <button onclick="closeRating()">Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="foodDetailsOverlay" class="overlay" onclick="closeFoodDetails(event)">
+    <div class="modal">
+      <img id="foodDetailsImage" class="modal-food-image" alt="Ảnh món ăn" />
+      <h4 id="foodDetailsName"></h4>
+      <div id="foodDetailsMeta" class="muted"></div>
+    </div>
+  </div>
+
+  <script src="js/nutrition.js"></script>
+</body>
+</html>
+

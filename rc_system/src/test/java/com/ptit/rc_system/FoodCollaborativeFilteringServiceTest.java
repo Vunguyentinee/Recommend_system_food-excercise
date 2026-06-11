@@ -2,7 +2,7 @@ package com.ptit.rc_system;
 
 import com.ptit.rc_system.entity.InteractionLog;
 import com.ptit.rc_system.repository.InteractionLogRepository;
-import com.ptit.rc_system.service.CollaborativeFilteringService;
+import com.ptit.rc_system.service.FoodCollaborativeFilteringService;
 import org.junit.jupiter.api.BeforeEach; // CẦN THÊM CÁI NÀY
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -17,13 +17,13 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @SpringBootTest
-class CollaborativeFilteringTest {
+class FoodCollaborativeFilteringServiceTest {
 
     @Mock
     private InteractionLogRepository logRepository;
 
     @InjectMocks
-    private CollaborativeFilteringService collaborativeFilteringService;
+    private FoodCollaborativeFilteringService collaborativeFilteringService;
 
     // --- THÊM KHỐI LỆNH NÀY ---
     @BeforeEach
@@ -57,7 +57,7 @@ class CollaborativeFilteringTest {
         log4.setFoodId(103L);
         log4.setRating(5.0);
 
-        Mockito.when(logRepository.findAllByFoodIdIsNotNull())
+        Mockito.when(logRepository.findAllByFoodIdIsNotNullAndRatingIsNotNull())
                 .thenReturn(Arrays.asList(log1, log2, log3, log4));
 
         List<Long> recommendedFoods = collaborativeFilteringService.recommendFoodsForUser(1L, 3);

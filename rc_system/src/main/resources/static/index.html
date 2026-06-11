@@ -3,56 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dang nhap</title>
-  <style>
-    :root {
-      --bg: #f5f7fb;
-      --card: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-      --primary: #2563eb;
-      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 20px;
-    }
-    .card {
-      width: 100%;
-      max-width: 420px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-      padding: 20px;
-      text-align: center;
-    }
-    a { color: var(--primary); text-decoration: none; }
-    .muted { color: var(--muted); font-size: 12px; }
-  </style>
+  <title>AI Dinh Dưỡng và Tập Luyện</title>
+  <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
-  <div class="card">
-    <h2>Dang chuyen toi trang dang nhap...</h2>
-    <div class="muted">Neu khong tu dong chuyen, bam <a href="login.html">vao day</a>.</div>
-  </div>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a class="nav-logo" href="index.html" title="Trang chủ" aria-label="Trang chủ">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M15 24h18M9 17v14M14 14v20M34 14v20M39 17v14M9 24H5M39 24h4" />
+        </svg>
+      </a>
 
-  <script>
-    const sessionRaw = localStorage.getItem('session');
-    if (sessionRaw) {
-      window.location.replace('app.html');
-    } else {
-      window.location.replace('login.html');
-    }
-  </script>
+      <div class="nav-menu" aria-label="Điều hướng chính">
+        <a class="nav-link" href="nutrition.html">MÓN ĂN</a>
+        <a class="nav-link" href="workout.html">BÀI TẬP</a>
+        <a class="nav-link" href="overview.html">TỔNG QUAN</a>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <a class="nav-link auth-link" href="login.html">Đăng nhập</a>
+    </div>
+  </nav>
+
+  <main class="hero">
+    <img class="hero-image" src="/images/thumbnail.jpg" alt="Tập luyện và ăn uống khoa học" />
+    <section class="hero-content" aria-label="Giới thiệu">
+      <!-- <h1><span class="hero-title">Xây dựng cơ thể khỏe mạnh</span></h1>
+      <p class="hero-subtitle">Dinh dưỡng khoa học kết hợp tập luyện phù hợp với hồ sơ cá nhân.</p> -->
+      <a class="cta" href="login.html">BẮT ĐẦU XÂY DỰNG CƠ THỂ KHỎE MẠNH →</a>
+    </section>
+  </main>
+
+  <script src="js/index.js"></script>
 </body>
 </html>

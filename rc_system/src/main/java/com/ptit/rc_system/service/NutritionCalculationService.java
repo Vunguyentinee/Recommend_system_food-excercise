@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Collections;
 
 @Service // Gắn mác này để Spring Boot biết đây là "Não bộ"
-public class NutritionService {
+public class NutritionCalculationService {
 
     // 1. Hàm tính BMR (Năng lượng nền để duy trì sự sống)
     public double calculateBMR(double weight, double height, int age, String gender) {
@@ -36,15 +36,15 @@ public class NutritionService {
 
     public double caculateTargetCalories(double tdee, String HealthGoal, String gender){
         double target = tdee;
-        if (HealthGoal.equalsIgnoreCase("Giảm cân")){
+        if ("lose".equalsIgnoreCase(HealthGoal) || "Giảm cân".equalsIgnoreCase(HealthGoal)){
             target= tdee - 500;
         }
-        else if (HealthGoal.equalsIgnoreCase("Tăng cân")){
+        else if ("gain".equalsIgnoreCase(HealthGoal) || "Tăng cân".equalsIgnoreCase(HealthGoal)){
             target = tdee + 500;
         }
 
         // Lưới an toàn
-        if (gender.equalsIgnoreCase("Nam") || gender.equalsIgnoreCase("Male")){
+        if ("Nam".equalsIgnoreCase(gender) || "Male".equalsIgnoreCase(gender)){
             return Math.max(target, 1500.0);
         }
         else{

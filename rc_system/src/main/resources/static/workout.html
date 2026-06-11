@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bài tập - AI Dinh Dưỡng</title>
+  <link rel="stylesheet" href="css/workout.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a class="nav-logo" href="overview.html" title="Tổng quan" aria-label="Tổng quan">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M15 24h18M9 17v14M14 14v20M34 14v20M39 17v14M9 24H5M39 24h4" />
+        </svg>
+      </a>
+      <a class="nav-link" href="nutrition.html">Món ăn</a>
+      <a class="nav-link" href="workout.html">Bài tập</a>
+    </div>
+    <div class="nav-right">
+      <span id="navUser" class="nav-user"></span>
+      <a id="navLogin" class="nav-link" href="login.html">Đăng nhập</a>
+      <a id="navLogout" class="nav-link" href="#" onclick="logout(); return false;">Đăng xuất</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <section class="section">
+      <h3>Buổi tập hôm nay</h3>
+      <div class="safety-reminder">
+        Gợi ý bài tập chỉ mang tính tham khảo. Hãy khởi động kỹ, tập đúng kỹ thuật và dừng lại nếu đau, chóng mặt hoặc khó thở.
+      </div>
+      <div id="workoutMessage" class="muted"></div>
+      <div class="progress"><div id="progressBar" class="progress-bar" style="width: 0%"></div></div>
+      <div id="progressText" class="muted"></div>
+      <div class="actions">
+        <button class="btn-light" onclick="loadRecommendedWorkouts(true)">Gợi ý bài tập khác</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <div id="workoutCards" class="grid-3"></div>
+    </section>
+
+    <section class="section">
+      <h3>Lịch sử hôm nay</h3>
+      <div id="workoutSummary" class="muted"></div>
+      <div id="workoutList" class="list" style="margin-top: 10px;"></div>
+    </section>
+  </div>
+
+  <div id="workoutSafetyGate" class="safety-gate" role="dialog" aria-modal="true" aria-labelledby="workoutSafetyTitle">
+    <div class="safety-gate-card">
+      <div class="safety-icon">!</div>
+      <h3 id="workoutSafetyTitle">Lưu ý trước khi sử dụng gợi ý bài tập</h3>
+      <p>
+        Bài tập gợi ý chỉ mang tính hỗ trợ, không thay thế huấn luyện viên hoặc bác sĩ.
+        Hãy khởi động kỹ, dùng mức tạ phù hợp, dừng lại nếu đau nhói/chóng mặt/khó thở và hỏi chuyên gia nếu bạn có chấn thương hoặc bệnh nền.
+      </p>
+      <label class="safety-check">
+        <input id="workoutSafetyCheck" type="checkbox" />
+        <span>Tôi hiểu rằng gợi ý chỉ mang tính tham khảo và tôi xin nhận hoàn toàn trách nhiệm khi sử dụng.</span>
+      </label>
+      <div id="workoutSafetyMsg" class="safety-message"></div>
+      <div class="actions">
+        <button class="btn-success" onclick="acceptSafetyGate('workout')">Tiếp tục sử dụng</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="workoutOverlay" class="modal" onclick="closeWorkoutDetails(event)">
+    <article class="modal-card" onclick="event.stopPropagation()">
+      <video id="modalVideo" class="modal-video" controls muted loop playsinline preload="metadata"></video>
+      <div id="modalTitle" class="modal-title"></div>
+      <div id="modalMeta" class="muted"></div>
+      <div id="modalInstructions" class="muted" style="margin-top: 9px;"></div>
+    </article>
+  </div>
+
+  <script src="js/workout.js"></script>
+</body>
+</html>

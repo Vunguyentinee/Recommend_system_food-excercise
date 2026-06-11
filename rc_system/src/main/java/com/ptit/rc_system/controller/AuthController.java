@@ -3,6 +3,8 @@ package com.ptit.rc_system.controller;
 import com.ptit.rc_system.entity.User;
 import com.ptit.rc_system.repository.UserRepository;
 import java.time.LocalDateTime;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,6 +53,16 @@ public class AuthController {
             ))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse("Invalid credentials")));
+    }
+
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<?> getUser(@PathVariable Long userId) {
+        return userRepository.findById(userId)
+            .<ResponseEntity<?>>map(user -> ResponseEntity.ok(
+                new AuthResponse(user.getUserId(), user.getUserName(), resolveRole(user))
+            ))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("User not found")));
     }
 
     private String resolveRole(User user) {
