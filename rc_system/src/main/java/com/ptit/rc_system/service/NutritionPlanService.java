@@ -62,6 +62,11 @@ public class NutritionPlanService {
                 .orElse(false);
     }
 
+    @Transactional(readOnly = true)
+    public boolean hasTodayPlan(Long userId) {
+        return findTodayPlan(userId).isPresent();
+    }
+
     @Transactional
     public Map<String, Object> replaceTodayPlan(Long userId, boolean regenerate, Double targetCalories,
                                                 Map<String, List<Map<String, Object>>> meals) {

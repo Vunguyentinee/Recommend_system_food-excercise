@@ -124,15 +124,20 @@ public class WorkoutCollaborativeFilteringService {
         if (commonExercises.isEmpty()) return 0.0;
 
         double dotProduct = 0.0;
-        double firstNorm = 0.0;
-        double secondNorm = 0.0;
         for (Long exerciseId : commonExercises) {
-            double firstRating = first.get(exerciseId);
-            double secondRating = second.get(exerciseId);
-            dotProduct += firstRating * secondRating;
-            firstNorm += firstRating * firstRating;
-            secondNorm += secondRating * secondRating;
+            dotProduct += first.get(exerciseId) * second.get(exerciseId);
         }
+
+        double firstNorm = 0.0;
+        for (double rating : first.values()) {
+            firstNorm += rating * rating;
+        }
+
+        double secondNorm = 0.0;
+        for (double rating : second.values()) {
+            secondNorm += rating * rating;
+        }
+
         return firstNorm == 0 || secondNorm == 0
             ? 0.0
             : dotProduct / (Math.sqrt(firstNorm) * Math.sqrt(secondNorm));

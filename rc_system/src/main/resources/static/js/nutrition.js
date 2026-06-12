@@ -14,7 +14,7 @@ let latestFoods = [];
     }
 
     function getProfile(userId) {
-      if (currentProfile) return currentProfile;
+      if (currentProfile && Number(currentProfile.userId) === Number(userId)) return currentProfile;
       const raw = localStorage.getItem(`profile_${userId}`);
       return raw ? JSON.parse(raw) : null;
     }
@@ -201,6 +201,10 @@ let latestFoods = [];
       showPage('page-survey');
     }
 
+    function refreshTdee() {
+      goToSurvey();
+    }
+
     function goToDashboard() {
       showPage('page-dashboard');
       refreshDashboard();
@@ -283,13 +287,18 @@ let latestFoods = [];
         });
     }
 
-    function refreshDashboard() {
+    function refreshDashboard(regenerate = false) {
       const session = ensureSession();
       if (!session) return;
       const userId = session.userId;
-      const url = `${baseUrl()}/api/nutrition/plan?userId=${userId}`;
+      const url = `${baseUrl()}/api/nutrition/plan?userId=${userId}&regenerate=${regenerate}`;
       fetch(url)
-        .then(res => res.json())
+        .then(res => res.json().then(data => {
+          if (!res.ok) {
+            throw new Error(data.error || 'Không thể xử lý yêu cầu.');
+          }
+          return data;
+        }))
         .then(data => {
           latestFoods = data.data || [];
           ratedFoodIdsInCurrentSuggestion = new Set();

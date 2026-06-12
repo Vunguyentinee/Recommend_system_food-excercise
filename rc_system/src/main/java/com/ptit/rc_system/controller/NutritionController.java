@@ -974,8 +974,11 @@ public class NutritionController {
             double portionMultiplier = targetCalories == null
                     ? 1.0
                     : roundToHalf(targetCalories / food.getCalories());
-            if (portionMultiplier < 0.5 || portionMultiplier > maxPortionMultiplier) {
+            if (portionMultiplier < 0.5) {
                 continue;
+            }
+            if (portionMultiplier > maxPortionMultiplier) {
+                portionMultiplier = maxPortionMultiplier;
             }
 
             double adjustedCalories = food.getCalories() * portionMultiplier;

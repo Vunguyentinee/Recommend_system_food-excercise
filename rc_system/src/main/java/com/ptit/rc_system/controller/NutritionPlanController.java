@@ -45,6 +45,8 @@ public class NutritionPlanController {
             ));
         }
 
+
+
         Map<String, Object> profile = nutritionController.loadLatestProfileForPlan(userId);
         Double targetCalories = numberOrNull(profile.get("targetCalories"));
         Map<String, List<Map<String, Object>>> meals = nutritionController.generateMealsForUser(userId, profile);

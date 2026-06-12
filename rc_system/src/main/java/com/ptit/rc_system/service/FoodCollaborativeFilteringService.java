@@ -144,13 +144,13 @@ public class FoodCollaborativeFilteringService {
         Map<Long, Double> combinedScores = new HashMap<>();
 
         for (int i = 0; i < userBasedRecs.size(); i++) {
-            double score = (topK - i) * userWeight;
+            double score = (topK * 2 - i) * userWeight;
             combinedScores.put(userBasedRecs.get(i),
                     combinedScores.getOrDefault(userBasedRecs.get(i), 0.0) + score);
         }
 
         for (int i = 0; i < itemBasedRecs.size(); i++) {
-            double score = (topK - i) * (1 - userWeight);
+            double score = (topK * 2 - i) * (1 - userWeight);
             combinedScores.put(itemBasedRecs.get(i),
                     combinedScores.getOrDefault(itemBasedRecs.get(i), 0.0) + score);
         }

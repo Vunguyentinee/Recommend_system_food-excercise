@@ -3,20 +3,19 @@ package com.ptit.rc_system;
 import com.ptit.rc_system.entity.InteractionLog;
 import com.ptit.rc_system.repository.InteractionLogRepository;
 import com.ptit.rc_system.service.FoodCollaborativeFilteringService;
-import org.junit.jupiter.api.BeforeEach; // CẦN THÊM CÁI NÀY
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations; // CẦN THÊM CÁI NÀY
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 class FoodCollaborativeFilteringServiceTest {
 
     @Mock
@@ -25,17 +24,8 @@ class FoodCollaborativeFilteringServiceTest {
     @InjectMocks
     private FoodCollaborativeFilteringService collaborativeFilteringService;
 
-    // --- THÊM KHỐI LỆNH NÀY ---
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
-    // --------------------------
-
     @Test
     void testRecommendFoodsForUser() {
-        // ... (phần code thân hàm test của bạn giữ nguyên) ...
-
         // 1. Giả lập dữ liệu (Mock Data)
         InteractionLog log1 = new InteractionLog();
         log1.setUserId(1L);
