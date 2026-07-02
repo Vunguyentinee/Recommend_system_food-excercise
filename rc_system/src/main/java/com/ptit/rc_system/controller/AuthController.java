@@ -2,7 +2,10 @@ package com.ptit.rc_system.controller;
 
 import com.ptit.rc_system.entity.User;
 import com.ptit.rc_system.repository.UserRepository;
-import java.time.LocalDateTime;
+import com.ptit.rc_system.security.JwtTokenUtil;
+import com.ptit.rc_system.security.CustomUserDetailsService;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.http.HttpStatus;
@@ -12,13 +15,25 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final CustomUserDetailsService userDetailsService;
 
-    public AuthController(UserRepository userRepository) {
+    public AuthController(UserRepository userRepository,
+                          PasswordEncoder passwordEncoder,
+                          JwtTokenUtil jwtTokenUtil,
+                          CustomUserDetailsService userDetailsService) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtTokenUtil = jwtTokenUtil;
+        this.userDetailsService = userDetailsService;
     }
 
     @PostMapping("/register")
@@ -33,11 +48,16 @@ public class AuthController {
         }
         User user = new User();
         user.setUserName(request.userName());
-        user.setPassword(request.password());
+        user.setPassword(passwordEncoder.encode(request.password()));
         user.setEmail(request.email());
         user.setCreateAt(LocalDateTime.now());
         User saved = userRepository.save(user);
-        return ResponseEntity.ok(new AuthResponse(saved.getUserId(), saved.getUserName(), resolveRole(saved)));
+
+        String role = resolveRole(saved);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(saved.getUserName());
+        String token = jwtTokenUtil.generateToken(userDetails, saved.getUserId(), role);
+
+        return ResponseEntity.ok(new AuthResponse(saved.getUserId(), saved.getUserName(), role, token));
     }
 
     @PostMapping("/login")
@@ -46,20 +66,24 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse("Missing required fields"));
         }
-        return userRepository.findByUserName(request.userName())
-            .filter(user -> user.getPassword().equals(request.password()))
-            .<ResponseEntity<?>>map(user -> ResponseEntity.ok(
-                new AuthResponse(user.getUserId(), user.getUserName(), resolveRole(user))
-            ))
-            .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse("Invalid credentials")));
+        Optional<User> optUser = userRepository.findByUserName(request.userName());
+        if (optUser.isPresent() && passwordEncoder.matches(request.password(), optUser.get().getPassword())) {
+            User user = optUser.get();
+            String role = resolveRole(user);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUserName());
+            String token = jwtTokenUtil.generateToken(userDetails, user.getUserId(), role);
+            return ResponseEntity.ok(new AuthResponse(user.getUserId(), user.getUserName(), role, token));
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse("Invalid credentials"));
+        }
     }
 
     @GetMapping("/users/{userId}")
     public ResponseEntity<?> getUser(@PathVariable Long userId) {
         return userRepository.findById(userId)
             .<ResponseEntity<?>>map(user -> ResponseEntity.ok(
-                new AuthResponse(user.getUserId(), user.getUserName(), resolveRole(user))
+                new AuthResponse(user.getUserId(), user.getUserName(), resolveRole(user), null)
             ))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse("User not found")));
@@ -79,10 +103,9 @@ public class AuthController {
     public record LoginRequest(String userName, String password) {
     }
 
-    public record AuthResponse(Long userId, String userName, String role) {
+    public record AuthResponse(Long userId, String userName, String role, String token) {
     }
 
     public record ErrorResponse(String message) {
     }
 }
-

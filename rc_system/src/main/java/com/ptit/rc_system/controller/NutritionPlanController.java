@@ -1,6 +1,7 @@
 package com.ptit.rc_system.controller;
 
 import com.ptit.rc_system.service.NutritionPlanService;
+import com.ptit.rc_system.service.NutritionRecommendationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,12 +20,12 @@ import java.util.Optional;
 public class NutritionPlanController {
 
     private final NutritionPlanService nutritionPlanService;
-    private final NutritionController nutritionController;
+    private final NutritionRecommendationService nutritionRecommendationService;
 
     public NutritionPlanController(NutritionPlanService nutritionPlanService,
-                                   NutritionController nutritionController) {
+                                   NutritionRecommendationService nutritionRecommendationService) {
         this.nutritionPlanService = nutritionPlanService;
-        this.nutritionController = nutritionController;
+        this.nutritionRecommendationService = nutritionRecommendationService;
     }
 
     @GetMapping("/api/nutrition/plan")
@@ -45,11 +46,9 @@ public class NutritionPlanController {
             ));
         }
 
-
-
-        Map<String, Object> profile = nutritionController.loadLatestProfileForPlan(userId);
+        Map<String, Object> profile = nutritionRecommendationService.loadLatestProfileForPlan(userId);
         Double targetCalories = numberOrNull(profile.get("targetCalories"));
-        Map<String, List<Map<String, Object>>> meals = nutritionController.generateMealsForUser(userId, profile);
+        Map<String, List<Map<String, Object>>> meals = nutritionRecommendationService.generateMealsForUser(userId, profile);
         return nutritionPlanService.replaceTodayPlan(userId, regenerate, targetCalories, meals);
     }
 
