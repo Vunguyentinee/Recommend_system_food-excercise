@@ -25,6 +25,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +62,14 @@ public class WorkoutRecommendationService {
     }
 
     @Transactional
+    @Caching(
+        cacheable = {
+            @Cacheable(value = "workoutPlans", key = "#userId", condition = "!#regenerate")
+        },
+        put = {
+            @CachePut(value = "workoutPlans", key = "#userId", condition = "#regenerate")
+        }
+    )
     public Map<String, Object> getOrCreateTodayPlan(long userId, boolean regenerate) {
         Profile profile = findProfile(userId);
         GoalConfig goalConfig = goalConfig(profile.healthGoal());

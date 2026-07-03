@@ -8,9 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.client.RestClient;
 
 import java.net.URI;
 import java.time.Duration;
@@ -23,9 +21,8 @@ import java.util.Map;
 public class AiRecommendationClient {
     private static final Logger logger = LoggerFactory.getLogger(AiRecommendationClient.class);
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final String baseUrl;
     private final String userBasedPath;
     private final String itemBasedPath;
     private final String hybridPath;
@@ -43,9 +40,12 @@ public class AiRecommendationClient {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
         factory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
-        this.restTemplate = new RestTemplate(factory);
+        
+        this.restClient = RestClient.builder()
+                .baseUrl(trimTrailingSlash(baseUrl))
+                .requestFactory(factory)
+                .build();
         this.objectMapper = objectMapper;
-        this.baseUrl = trimTrailingSlash(baseUrl);
         this.userBasedPath = userBasedPath;
         this.itemBasedPath = itemBasedPath;
         this.hybridPath = hybridPath;
@@ -73,20 +73,20 @@ public class AiRecommendationClient {
             return Collections.emptyList();
         }
 
-        URI uri = buildUri(path, params);
         try {
-            String body = restTemplate.getForObject(uri, String.class);
+            String body = restClient.get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path(path);
+                        params.forEach(uriBuilder::queryParam);
+                        return uriBuilder.build();
+                    })
+                    .retrieve()
+                    .body(String.class);
             return parseIdList(body);
-        } catch (RestClientException ex) {
-            logger.warn("AI service call failed: {}", uri, ex);
+        } catch (Exception ex) {
+            logger.warn("AI service call failed via RestClient at path {}: {}", path, ex.getMessage());
             return Collections.emptyList();
         }
-    }
-
-    private URI buildUri(String path, Map<String, Object> params) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl + path);
-        params.forEach(builder::queryParam);
-        return builder.build().toUri();
     }
 
     private List<Long> parseIdList(String body) {

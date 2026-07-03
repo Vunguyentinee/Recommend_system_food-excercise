@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import org.springframework.cache.annotation.Cacheable;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -84,6 +86,7 @@ public class NutritionRecommendationService {
     }
 
     // ===== SMART RECOMMENDATION ORCHESTRATION =====
+    @Cacheable(value = "nutritionRecommendations", key = "#userId")
     public Map<String, Object> recommendSmart(Long userId, Double weight, Double height,
                                               Integer age, String gender, Double activityLevel,
                                               String healthGoal, boolean isTraditional, int topK) {

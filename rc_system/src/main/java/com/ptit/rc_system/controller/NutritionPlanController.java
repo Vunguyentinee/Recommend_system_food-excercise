@@ -2,6 +2,8 @@ package com.ptit.rc_system.controller;
 
 import com.ptit.rc_system.service.NutritionPlanService;
 import com.ptit.rc_system.service.NutritionRecommendationService;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,11 +23,14 @@ public class NutritionPlanController {
 
     private final NutritionPlanService nutritionPlanService;
     private final NutritionRecommendationService nutritionRecommendationService;
+    private final CacheManager cacheManager;
 
     public NutritionPlanController(NutritionPlanService nutritionPlanService,
-                                   NutritionRecommendationService nutritionRecommendationService) {
+                                   NutritionRecommendationService nutritionRecommendationService,
+                                   CacheManager cacheManager) {
         this.nutritionPlanService = nutritionPlanService;
         this.nutritionRecommendationService = nutritionRecommendationService;
+        this.cacheManager = cacheManager;
     }
 
     @GetMapping("/api/nutrition/plan")
@@ -44,6 +49,13 @@ public class NutritionPlanController {
                     "Không thể đổi thực đơn sau khi đã hoàn thành/chấm điểm món ăn.",
                     "FOOD_PLAN_ALREADY_STARTED"
             ));
+        }
+
+        if (regenerate) {
+            Cache cache = cacheManager.getCache("nutritionRecommendations");
+            if (cache != null) {
+                cache.evict(userId);
+            }
         }
 
         Map<String, Object> profile = nutritionRecommendationService.loadLatestProfileForPlan(userId);

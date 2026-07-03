@@ -1,6 +1,7 @@
 import logging
 import os
 import urllib.parse
+import time
 from typing import Dict, List, Tuple
 
 from fastapi import FastAPI, Query
@@ -42,6 +43,10 @@ def build_db_url() -> str:
 def create_db_engine() -> Engine:
     url = build_db_url()
     return create_engine(url, pool_pre_ping=True)
+
+
+# Initialize global database engine to reuse connection pool
+db_engine = create_db_engine()
 
 
 def fetch_interactions(engine: Engine) -> List[Tuple[int, int, float]]:
@@ -178,10 +183,27 @@ def top_rated_by_user(matrix: Dict[int, Dict[int, float]], user_id: int, top_k: 
     return [fid for fid, _ in sorted(scores.items(), key=lambda x: x[1], reverse=True)[:top_k]]
 
 
-def build_matrix() -> Dict[int, Dict[int, float]]:
-    engine = create_db_engine()
-    rows = fetch_interactions(engine)
-    return build_user_item_matrix(rows)
+# Caching variables for interaction matrix
+cached_matrix = None
+last_cache_time = 0.0
+CACHE_TTL = 300.0  # Cache duration: 5 minutes (300 seconds)
+
+
+def get_cached_matrix() -> Dict[int, Dict[int, float]]:
+    global cached_matrix, last_cache_time
+    now = time.time()
+    if cached_matrix is None or (now - last_cache_time) > CACHE_TTL:
+        logger.info("Cache expired or empty. Rebuilding matrix from DB...")
+        try:
+            rows = fetch_interactions(db_engine)
+            cached_matrix = build_user_item_matrix(rows)
+            last_cache_time = now
+        except Exception as e:
+            logger.error(f"Error fetching interactions from database: {e}")
+            if cached_matrix is None:
+                # Return empty matrix instead of failing if CSDL is down
+                return {}
+    return cached_matrix
 
 
 @app.get("/api/ai/health")
@@ -191,13 +213,13 @@ def health() -> Dict[str, str]:
 
 @app.get("/api/ai/recommend/user")
 def recommend_user(userId: int = Query(...), topK: int = Query(5)) -> Dict[str, List[int]]:
-    matrix = build_matrix()
+    matrix = get_cached_matrix()
     return {"data": recommend_user_based(matrix, userId, topK)}
 
 
 @app.get("/api/ai/recommend/item")
 def recommend_item(userId: int = Query(...), topK: int = Query(5)) -> Dict[str, List[int]]:
-    matrix = build_matrix()
+    matrix = get_cached_matrix()
     return {"data": recommend_item_based(matrix, userId, topK)}
 
 
@@ -207,11 +229,11 @@ def recommend_hybrid_cf(
     topK: int = Query(5),
     userWeight: float = Query(0.6),
 ) -> Dict[str, List[int]]:
-    matrix = build_matrix()
+    matrix = get_cached_matrix()
     return {"data": recommend_hybrid(matrix, userId, topK, userWeight)}
 
 
 @app.get("/api/ai/recommend/top-rated")
 def recommend_top_rated(userId: int = Query(...), topK: int = Query(5)) -> Dict[str, List[int]]:
-    matrix = build_matrix()
+    matrix = get_cached_matrix()
     return {"data": top_rated_by_user(matrix, userId, topK)}
