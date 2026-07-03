@@ -1,0 +1,21 @@
+# IDEs and Editors
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+# Java / Maven
+target/
+*.class
+*.log
+.metadata/
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.env
+venv/
+.venv/
+env/
