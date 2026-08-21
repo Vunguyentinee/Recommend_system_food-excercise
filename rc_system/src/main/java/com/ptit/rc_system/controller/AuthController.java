@@ -4,6 +4,8 @@ import com.ptit.rc_system.entity.User;
 import com.ptit.rc_system.repository.UserRepository;
 import com.ptit.rc_system.security.JwtTokenUtil;
 import com.ptit.rc_system.security.CustomUserDetailsService;
+import com.ptit.rc_system.security.OwnershipGuard;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,15 +27,18 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtil jwtTokenUtil;
     private final CustomUserDetailsService userDetailsService;
+    private final OwnershipGuard ownershipGuard;
 
     public AuthController(UserRepository userRepository,
                           PasswordEncoder passwordEncoder,
                           JwtTokenUtil jwtTokenUtil,
-                          CustomUserDetailsService userDetailsService) {
+                          CustomUserDetailsService userDetailsService,
+                          OwnershipGuard ownershipGuard) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenUtil = jwtTokenUtil;
         this.userDetailsService = userDetailsService;
+        this.ownershipGuard = ownershipGuard;
     }
 
     @PostMapping("/register")
@@ -50,6 +55,7 @@ public class AuthController {
         user.setUserName(request.userName());
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setEmail(request.email());
+        user.setRole("USER");
         user.setCreateAt(LocalDateTime.now());
         User saved = userRepository.save(user);
 
@@ -81,6 +87,7 @@ public class AuthController {
 
     @GetMapping("/users/{userId}")
     public ResponseEntity<?> getUser(@PathVariable Long userId) {
+        ownershipGuard.checkSelfOrAdmin(userId);
         return userRepository.findById(userId)
             .<ResponseEntity<?>>map(user -> ResponseEntity.ok(
                 new AuthResponse(user.getUserId(), user.getUserName(), resolveRole(user), null)
@@ -89,8 +96,19 @@ public class AuthController {
                 .body(new ErrorResponse("User not found")));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<?> me(Authentication authentication) {
+        return userRepository.findByUserName(authentication.getName())
+            .<ResponseEntity<?>>map(user -> ResponseEntity.ok(
+                new AuthResponse(user.getUserId(), user.getUserName(), resolveRole(user), null)
+            ))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("User not found")));
+    }
+
     private String resolveRole(User user) {
-        return "admin".equalsIgnoreCase(user.getUserName()) ? "admin" : "user";
+        String role = user.getRole();
+        return (role == null || role.isBlank()) ? "user" : role.toLowerCase();
     }
 
     private boolean isBlank(String value) {
