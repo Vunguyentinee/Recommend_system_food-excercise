@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -126,6 +127,7 @@ public class WorkoutRecommendationService {
     }
 
     @Transactional
+    @CacheEvict(value = "workoutPlans", key = "#command.userId()")
     public Map<String, Object> complete(WorkoutCompletion command) {
         PlanDetail detail = findOwnedDetail(command.userId(), command.detailId(), command.exerciseId());
         if (Boolean.TRUE.equals(detail.getCompleted())) {
@@ -165,6 +167,7 @@ public class WorkoutRecommendationService {
     }
 
     @Transactional
+    @CacheEvict(value = "workoutPlans", key = "#command.userId()")
     public Map<String, Object> rate(WorkoutRating command) {
         if (command.rating() == null || command.rating() < 1 || command.rating() > 5) {
             throw new IllegalArgumentException("Điểm đánh giá phải nằm trong khoảng 1-5.");
@@ -199,24 +202,24 @@ public class WorkoutRecommendationService {
 
     public Map<String, Object> history(long userId, LocalDate date) {
         List<Map<String, Object>> completed = jdbcTemplate.query(
-            "SELECT pd.DetailID, pd.ExerciseID, e.Name, e.Target_muscle, pd.Workout_Phase, "
-                + "pd.Duration_Minutes, pd.Calories_Burned, pd.Completed_At, pd.Rating "
-                + "FROM Plan_Details pd "
-                + "JOIN Daily_Plans dp ON dp.PlanID = pd.PlanID "
-                + "JOIN Exercise_Library e ON e.ExerciseID = pd.ExerciseID "
-                + "WHERE dp.UserID = ? AND dp.PlanDate = ? AND pd.Item_type = 'EXERCISE' "
-                + "AND pd.Is_completed = 1 ORDER BY pd.Completed_At, pd.Sort_Order",
+            "SELECT pd.detailid AS detailid, pd.exerciseid AS exerciseid, e.name AS name, e.target_muscle AS target_muscle, pd.workout_phase AS workout_phase, "
+                + "pd.duration_minutes AS duration_minutes, pd.calories_burned AS calories_burned, pd.completed_at AS completed_at, pd.rating AS rating "
+                + "FROM plan_details pd "
+                + "JOIN daily_plans dp ON dp.planid = pd.planid "
+                + "JOIN exercise_library e ON e.exerciseid = pd.exerciseid "
+                + "WHERE dp.userid = ? AND dp.plandate = ? AND pd.item_type = 'EXERCISE' "
+                + "AND pd.is_completed = true ORDER BY pd.completed_at, pd.sort_order",
             (rs, rowNum) -> {
                 Map<String, Object> item = new LinkedHashMap<>();
-                item.put("detailId", rs.getLong("DetailID"));
-                item.put("exerciseId", rs.getLong("ExerciseID"));
-                item.put("name", rs.getString("Name"));
-                item.put("targetMuscle", rs.getString("Target_muscle"));
-                item.put("phase", rs.getString("Workout_Phase"));
-                item.put("durationMinutes", nullableInteger(rs.getObject("Duration_Minutes")));
-                item.put("caloriesBurned", round(nullableDouble(rs.getObject("Calories_Burned"))));
-                item.put("completedAt", rs.getTimestamp("Completed_At"));
-                item.put("rating", nullableDoubleObject(rs.getObject("Rating")));
+                item.put("detailId", rs.getLong("detailid"));
+                item.put("exerciseId", rs.getLong("exerciseid"));
+                item.put("name", rs.getString("name"));
+                item.put("targetMuscle", rs.getString("target_muscle"));
+                item.put("phase", rs.getString("workout_phase"));
+                item.put("durationMinutes", nullableInteger(rs.getObject("duration_minutes")));
+                item.put("caloriesBurned", round(nullableDouble(rs.getObject("calories_burned"))));
+                item.put("completedAt", rs.getTimestamp("completed_at"));
+                item.put("rating", nullableDoubleObject(rs.getObject("rating")));
                 return item;
             },
             userId, date
@@ -224,20 +227,20 @@ public class WorkoutRecommendationService {
 
         LocalDate weekStart = date.minusDays(6);
         List<Map<String, Object>> weeklyRows = jdbcTemplate.queryForList(
-            "SELECT pd.PlanID, pd.Duration_Minutes, pd.Calories_Burned, e.Target_muscle "
-                + "FROM Plan_Details pd "
-                + "JOIN Daily_Plans dp ON dp.PlanID = pd.PlanID "
-                + "JOIN Exercise_Library e ON e.ExerciseID = pd.ExerciseID "
-                + "WHERE dp.UserID = ? AND dp.PlanDate BETWEEN ? AND ? "
-                + "AND pd.Item_type = 'EXERCISE' AND pd.Is_completed = 1",
+            "SELECT pd.planid AS planid, pd.duration_minutes AS duration_minutes, pd.calories_burned AS calories_burned, e.target_muscle AS target_muscle "
+                + "FROM plan_details pd "
+                + "JOIN daily_plans dp ON dp.planid = pd.planid "
+                + "JOIN exercise_library e ON e.exerciseid = pd.exerciseid "
+                + "WHERE dp.userid = ? AND dp.plandate BETWEEN ? AND ? "
+                + "AND pd.item_type = 'EXERCISE' AND pd.is_completed = true",
             userId, weekStart, date
         );
 
         Set<Object> completedPlans = weeklyRows.stream()
-            .map(row -> row.get("PlanID"))
+            .map(row -> row.get("planid"))
             .collect(Collectors.toSet());
         Set<String> trainedMuscles = weeklyRows.stream()
-            .map(row -> Objects.toString(row.get("Target_muscle"), ""))
+            .map(row -> Objects.toString(row.get("target_muscle"), ""))
             .filter(value -> !value.isBlank())
             .collect(Collectors.toCollection(LinkedHashSet::new));
 
@@ -257,8 +260,8 @@ public class WorkoutRecommendationService {
             "from", weekStart,
             "to", date,
             "completedSessions", completedPlans.size(),
-            "totalMinutes", weeklyRows.stream().mapToInt(row -> integer(row.get("Duration_Minutes"))).sum(),
-            "totalCalories", round(weeklyRows.stream().mapToDouble(row -> number(row.get("Calories_Burned"))).sum()),
+            "totalMinutes", weeklyRows.stream().mapToInt(row -> integer(row.get("duration_minutes"))).sum(),
+            "totalCalories", round(weeklyRows.stream().mapToDouble(row -> number(row.get("calories_burned"))).sum()),
             "trainedMuscles", trainedMuscles
         ));
         return response;

@@ -31,7 +31,7 @@ public class DailyPlan {
     @Column(name = "Workout_Days_Per_Week")
     private Integer workoutDaysPerWeek;
 
-    @Column(name = "Cardio_Note", columnDefinition = "nvarchar(255)")
+    @Column(name = "Cardio_Note")
     private String cardioNote;
 
     public Integer getPlanId() { return planId; }

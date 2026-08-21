@@ -42,7 +42,7 @@ public class PlanDetail {
     @Column(name = "Sets")
     private Integer sets;
 
-    @Column(name = "Reps", columnDefinition = "nvarchar(255)")
+    @Column(name = "Reps")
     private String reps;
 
     @Column(name = "Rest_Seconds")
@@ -51,7 +51,7 @@ public class PlanDetail {
     @Column(name = "Sort_Order")
     private Integer sortOrder;
 
-    @Column(name = "Workout_Phase", columnDefinition = "nvarchar(255)")
+    @Column(name = "Workout_Phase")
     private String workoutPhase;
 
     @Column(name = "Duration_Minutes")

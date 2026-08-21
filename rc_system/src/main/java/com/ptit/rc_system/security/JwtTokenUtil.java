@@ -21,9 +21,12 @@ public class JwtTokenUtil {
     private final long jwtExpirationMs;
 
     public JwtTokenUtil(
-            @Value("${jwt.secret:GoodHealthSystemSecretKeyGoodHealthSystemSecretKey}") String secret,
+            @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration-ms:86400000}") long jwtExpirationMs) {
         // HMAC-SHA256 requires a key of at least 256 bits (32 bytes)
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("jwt.secret must be set to a random value of at least 32 bytes (set the JWT_SECRET env var)");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.jwtExpirationMs = jwtExpirationMs;
     }

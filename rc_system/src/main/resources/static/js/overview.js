@@ -6,7 +6,10 @@ function getTodayKey() {
     }
 
     function baseUrl() {
-      return window.location.origin;
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return window.location.origin;
+      }
+      return "https://rc-system-health-backend.onrender.com";
     }
 
     let activityCalendarDate = new Date();
@@ -14,6 +17,15 @@ function getTodayKey() {
     function getSession() {
       const raw = localStorage.getItem('session');
       return raw ? JSON.parse(raw) : null;
+    }
+
+    function authFetch(url, options = {}) {
+      const session = getSession();
+      const headers = new Headers(options.headers || {});
+      if (session && session.token) {
+        headers.set('Authorization', 'Bearer ' + session.token);
+      }
+      return fetch(url, Object.assign({}, options, { headers }));
     }
 
     function ensureSession() {
@@ -42,7 +54,7 @@ function getTodayKey() {
     function hydrateSessionUser(session) {
       renderNavbar(session);
       if (!session || session.userName) return;
-      fetch(`${baseUrl()}/api/auth/users/${session.userId}`)
+      authFetch(`${baseUrl()}/api/auth/users/${session.userId}`)
         .then(res => res.ok ? res.json() : null)
         .then(user => {
           if (!user) return;
@@ -75,7 +87,7 @@ function getTodayKey() {
     }
 
     function fetchProfile(userId) {
-      return fetch(`${baseUrl()}/api/health-profiles/${userId}`)
+      return authFetch(`${baseUrl()}/api/health-profiles/${userId}`)
         .then(res => {
           if (res.status === 404) {
             localStorage.removeItem(`profile_${userId}`);
@@ -137,13 +149,56 @@ function getTodayKey() {
       const profileSummary = document.getElementById('profileSummary');
       const targetSummary = document.getElementById('targetSummary');
       if (!profile) {
-        profileSummary.textContent = 'Chưa có hồ sơ. Hãy cập nhật để tính toán mục tiêu calo.';
-        targetSummary.textContent = 'Chưa có dữ liệu mục tiêu.';
+        profileSummary.innerHTML = '<div class="muted">Chưa có hồ sơ. Hãy cập nhật để tính toán mục tiêu calo.</div>';
+        targetSummary.innerHTML = '<div class="muted">Chưa có dữ liệu mục tiêu.</div>';
         return;
       }
-      profileSummary.innerHTML = `Cân nặng: ${profile.weight || '-'} kg<br/>Chiều cao: ${profile.height || '-'} cm<br/>Tuổi: ${profile.age || '-'}<br/>Giới tính: ${genderLabel(profile.gender)}<br/>Mức vận động: ${activityLevelLabel(profile.activityLevel)}<br/>Mục tiêu: ${healthGoalLabel(profile.healthGoal)}`;
+      
+      profileSummary.innerHTML = `
+        <div class="profile-info-list">
+          <div class="profile-info-item">
+            <span class="info-icon">⚖️</span>
+            <span class="info-label">Cân nặng:</span>
+            <strong class="info-val">${profile.weight || '-'} kg</strong>
+          </div>
+          <div class="profile-info-item">
+            <span class="info-icon">📏</span>
+            <span class="info-label">Chiều cao:</span>
+            <strong class="info-val">${profile.height || '-'} cm</strong>
+          </div>
+          <div class="profile-info-item">
+            <span class="info-icon">🎂</span>
+            <span class="info-label">Tuổi:</span>
+            <strong class="info-val">${profile.age || '-'} tuổi</strong>
+          </div>
+          <div class="profile-info-item">
+            <span class="info-icon">👥</span>
+            <span class="info-label">Giới tính:</span>
+            <strong class="info-val">${genderLabel(profile.gender)}</strong>
+          </div>
+          <div class="profile-info-item">
+            <span class="info-icon">🏃</span>
+            <span class="info-label">Mức vận động:</span>
+            <strong class="info-val">${activityLevelLabel(profile.activityLevel)}</strong>
+          </div>
+          <div class="profile-info-item">
+            <span class="info-icon">🎯</span>
+            <span class="info-label">Mục tiêu:</span>
+            <strong class="info-val">${healthGoalLabel(profile.healthGoal)}</strong>
+          </div>
+        </div>
+      `;
+      
       const target = calculateTargetCalories(profile);
-      targetSummary.textContent = `Mục tiêu calo/ngày: ${target || '-'} kcal`;
+      targetSummary.innerHTML = `
+        <div class="target-calo-card">
+          <div class="target-calo-icon">🔥</div>
+          <div class="target-calo-info">
+            <span class="target-calo-label">Mục tiêu Calo ngày</span>
+            <span class="target-calo-val">${target || '-'} <small>kcal</small></span>
+          </div>
+        </div>
+      `;
     }
 
     function formatDateKey(date) {
@@ -156,14 +211,13 @@ function getTodayKey() {
       return `Tháng ${date.getMonth() + 1}/${date.getFullYear()}`;
     }
 
-    function hasRatedItems(history) {
-      return Array.isArray(history?.data)
-        && history.data.some(item => item.rating !== null && item.rating !== undefined && item.rating !== '');
+    function hasCompletedItems(history) {
+      return Array.isArray(history?.data) && history.data.length > 0;
     }
 
     function fetchDailyHistory(endpoint, userId, dateKey) {
       const query = new URLSearchParams({ userId, date: dateKey });
-      return fetch(`${baseUrl()}${endpoint}?${query}`)
+      return authFetch(`${baseUrl()}${endpoint}?${query}`)
         .then(res => res.ok ? res.json() : null)
         .catch(() => null);
     }
@@ -199,8 +253,8 @@ function getTodayKey() {
           dateKey === todayKey ? 'today' : ''
         ].filter(Boolean).join(' ');
         const titleParts = [];
-        if (status.food) titleParts.push('có đánh giá món ăn');
-        if (status.workout) titleParts.push('có đánh giá bài tập');
+        if (status.food) titleParts.push('đã ăn uống hôm nay');
+        if (status.workout) titleParts.push('đã tập luyện hôm nay');
         const title = titleParts.length ? `${dateKey}: ${titleParts.join(', ')}` : dateKey;
         const markers = active
           ? `<span class="markers">${status.food ? '<span class="calendar-badge food-badge">Ăn</span>' : ''}${status.workout ? '<span class="calendar-badge workout-badge">Tập</span>' : ''}</span>`
@@ -231,8 +285,8 @@ function getTodayKey() {
             fetchDailyHistory('/api/workouts/history', session.userId, dateKey)
           ]).then(([foodHistory, workoutHistory]) => ({
             dateKey,
-            food: hasRatedItems(foodHistory),
-            workout: hasRatedItems(workoutHistory)
+            food: hasCompletedItems(foodHistory),
+            workout: hasCompletedItems(workoutHistory)
           }))
         );
       }
@@ -266,7 +320,7 @@ function getTodayKey() {
 
     function renderFoodSummary(session) {
       const query = new URLSearchParams({ userId: session.userId, date: getTodayKey() });
-      fetch(`${baseUrl()}/api/nutrition/history?${query}`)
+      authFetch(`${baseUrl()}/api/nutrition/history?${query}`)
         .then(res => res.json().then(data => {
           if (!res.ok) throw new Error(data.message || 'Không thể tải lịch sử món ăn.');
           return data;
@@ -296,7 +350,7 @@ function getTodayKey() {
 
     function renderWorkoutSummary(session) {
       const query = new URLSearchParams({ userId: session.userId, date: getTodayKey() });
-      fetch(`${baseUrl()}/api/workouts/history?${query}`)
+      authFetch(`${baseUrl()}/api/workouts/history?${query}`)
         .then(res => res.json().then(data => {
           if (!res.ok) throw new Error(data.message || 'Không thể tải lịch sử bài tập.');
           return data;

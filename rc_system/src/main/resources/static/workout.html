@@ -5,48 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bài tập - AI Dinh Dưỡng</title>
   <link rel="stylesheet" href="css/workout.css">
+  
+  <!-- Phosphor Icons (CDN) -->
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/style.css" />
 </head>
 <body>
   <nav class="navbar">
     <div class="nav-left">
-      <a class="nav-logo" href="overview.html" title="Tổng quan" aria-label="Tổng quan">
-        <svg viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M15 24h18M9 17v14M14 14v20M34 14v20M39 17v14M9 24H5M39 24h4" />
-        </svg>
+      <a class="nav-brand-wrapper" href="overview.html" title="Tổng quan" aria-label="Tổng quan">
+        <span class="nav-logo-emoji">💪</span>
+        <span class="nav-brand">Goodhealth.ai</span>
       </a>
-      <a class="nav-link" href="nutrition.html">Món ăn</a>
-      <a class="nav-link" href="workout.html">Bài tập</a>
+      <a class="nav-link" href="nutrition.html"><i class="ph-bold ph-bowl-food"></i> Món ăn</a>
+      <a class="nav-link" href="workout.html"><i class="ph-bold ph-barbell"></i> Bài tập</a>
     </div>
     <div class="nav-right">
-      <span id="navUser" class="nav-user"></span>
-      <a id="navLogin" class="nav-link" href="login.html">Đăng nhập</a>
-      <a id="navLogout" class="nav-link" href="#" onclick="logout(); return false;">Đăng xuất</a>
+      <span class="nav-user-wrapper">
+        <i class="ph-bold ph-user-circle"></i>
+        <span id="navUser" class="nav-user"></span>
+      </span>
+      <a id="navLogin" class="nav-link" href="login.html"><i class="ph-bold ph-sign-in"></i> Đăng nhập</a>
+      <a id="navLogout" class="nav-link" href="#" onclick="logout(); return false;"><i class="ph-bold ph-sign-out"></i> Đăng xuất</a>
     </div>
   </nav>
 
   <div class="container">
-    <section class="section">
-      <h3>Buổi tập hôm nay</h3>
-      <div class="safety-reminder">
-        Gợi ý bài tập chỉ mang tính tham khảo. Hãy khởi động kỹ, tập đúng kỹ thuật và dừng lại nếu đau, chóng mặt hoặc khó thở.
+    <div class="safety-reminder">
+      <i class="ph-bold ph-warning-circle"></i> Gợi ý bài tập chỉ mang tính tham khảo. Hãy khởi động kỹ, tập đúng kỹ thuật và dừng lại nếu đau, chóng mặt hoặc khó thở.
+    </div>
+    
+    <div class="split-dashboard-layout">
+      <!-- Sidebar Area (30% width) -->
+      <div class="sidebar-area">
+        
+        <div class="card sidebar-card progress-card">
+          <span class="pill"><i class="ph-bold ph-bar-bell"></i> Tiến trình tập luyện</span>
+          <div class="progress" style="margin: 16px 0 10px;">
+            <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+          </div>
+          <div id="progressText" class="muted" style="font-weight: 600; margin-bottom: 12px;"></div>
+          <div id="workoutMessage" class="muted small-info"></div>
+          
+          <div class="actions vertical-actions">
+            <button class="btn-primary" onclick="loadRecommendedWorkouts(true)">
+              <i class="ph-bold ph-arrows-counter-clockwise"></i> Gợi ý bài tập khác
+            </button>
+          </div>
+        </div>
+        
+        <div class="card sidebar-card history-card">
+          <span class="pill"><i class="ph-bold ph-clock-counter-clockwise"></i> Lịch sử hôm nay</span>
+          <div id="workoutSummary" class="muted" style="margin-top: 12px;">Chưa có bài tập hoàn thành.</div>
+          <div id="workoutList" class="list" style="margin-top: 14px;"></div>
+        </div>
+        
       </div>
-      <div id="workoutMessage" class="muted"></div>
-      <div class="progress"><div id="progressBar" class="progress-bar" style="width: 0%"></div></div>
-      <div id="progressText" class="muted"></div>
-      <div class="actions">
-        <button class="btn-light" onclick="loadRecommendedWorkouts(true)">Gợi ý bài tập khác</button>
+      
+      <!-- Main Content Area (70% width) -->
+      <div class="main-content-area">
+        <div class="workout-grid-wrapper">
+          <div class="section-title-row">
+            <h3><i class="ph-bold ph-barbell"></i> Bài tập đề xuất cho bạn</h3>
+          </div>
+          <div id="workoutCards" class="grid-3" style="margin-top: 16px;"></div>
+        </div>
       </div>
-    </section>
-
-    <section class="section">
-      <div id="workoutCards" class="grid-3"></div>
-    </section>
-
-    <section class="section">
-      <h3>Lịch sử hôm nay</h3>
-      <div id="workoutSummary" class="muted"></div>
-      <div id="workoutList" class="list" style="margin-top: 10px;"></div>
-    </section>
+    </div>
   </div>
 
   <div id="workoutSafetyGate" class="safety-gate" role="dialog" aria-modal="true" aria-labelledby="workoutSafetyTitle">

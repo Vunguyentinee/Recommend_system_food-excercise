@@ -19,25 +19,15 @@ def _get_env(name: str, default: str = "") -> str:
 
 
 def build_db_url() -> str:
-    driver = _get_env("DB_DRIVER", "ODBC Driver 17 for SQL Server")
-    server = _get_env("DB_SERVER", "localhost")
-    port = _get_env("DB_PORT", "1433")
-    database = _get_env("DB_NAME", "GoodHealthSystem")
-    user = _get_env("DB_USER", "sa")
-    password = _get_env("DB_PASSWORD", "123")
-    encrypt = _get_env("DB_ENCRYPT", "yes")
-    trust_cert = _get_env("DB_TRUST_SERVER_CERT", "yes")
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        raise RuntimeError("DATABASE_URL environment variable is required")
 
-    odbc_params = (
-        f"DRIVER={driver};"
-        f"SERVER={server},{port};"
-        f"DATABASE={database};"
-        f"UID={user};"
-        f"PWD={password};"
-        f"Encrypt={encrypt};"
-        f"TrustServerCertificate={trust_cert};"
-    )
-    return "mssql+pyodbc:///?odbc_connect=" + urllib.parse.quote_plus(odbc_params)
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return db_url
 
 
 def create_db_engine() -> Engine:

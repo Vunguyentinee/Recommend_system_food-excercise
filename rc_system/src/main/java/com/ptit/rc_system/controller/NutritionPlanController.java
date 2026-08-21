@@ -1,11 +1,11 @@
 package com.ptit.rc_system.controller;
 
+import com.ptit.rc_system.security.OwnershipGuard;
 import com.ptit.rc_system.service.NutritionPlanService;
 import com.ptit.rc_system.service.NutritionRecommendationService;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,26 +17,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@CrossOrigin(origins = "*")
 @RestController
 public class NutritionPlanController {
 
     private final NutritionPlanService nutritionPlanService;
     private final NutritionRecommendationService nutritionRecommendationService;
     private final CacheManager cacheManager;
+    private final OwnershipGuard ownershipGuard;
 
     public NutritionPlanController(NutritionPlanService nutritionPlanService,
                                    NutritionRecommendationService nutritionRecommendationService,
-                                   CacheManager cacheManager) {
+                                   CacheManager cacheManager,
+                                   OwnershipGuard ownershipGuard) {
         this.nutritionPlanService = nutritionPlanService;
         this.nutritionRecommendationService = nutritionRecommendationService;
         this.cacheManager = cacheManager;
+        this.ownershipGuard = ownershipGuard;
     }
 
     @GetMapping("/api/nutrition/plan")
     public Object getOrCreateNutritionPlan(
             @RequestParam Long userId,
             @RequestParam(defaultValue = "false") boolean regenerate) {
+        ownershipGuard.checkSelfOrAdmin(userId);
         if (!regenerate) {
             Optional<Map<String, Object>> existingPlan = nutritionPlanService.findExistingTodayPlan(userId);
             if (existingPlan.isPresent()) {
@@ -68,6 +71,7 @@ public class NutritionPlanController {
     public Object getNutritionHistory(
             @RequestParam Long userId,
             @RequestParam(required = false) LocalDate date) {
+        ownershipGuard.checkSelfOrAdmin(userId);
         return nutritionPlanService.history(userId, date);
     }
 

@@ -5,22 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hệ thống AI dinh dưỡng - Dashboard</title>
   <link rel="stylesheet" href="css/nutrition.css">
+  
+  <!-- Phosphor Icons (CDN) -->
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/style.css" />
 </head>
 <body>
   <nav class="navbar">
     <div class="nav-left">
-      <a class="nav-logo" href="overview.html" title="Tổng quan" aria-label="Tổng quan">
-        <svg viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M15 24h18M9 17v14M14 14v20M34 14v20M39 17v14M9 24H5M39 24h4" />
-        </svg>
+      <a class="nav-brand-wrapper" href="overview.html" title="Tổng quan" aria-label="Tổng quan">
+        <span class="nav-logo-emoji">💪</span>
+        <span class="nav-brand">Goodhealth.ai</span>
       </a>
-      <a class="nav-link" href="nutrition.html">Món ăn</a>
-      <a class="nav-link" href="workout.html">Bài tập</a>
+      <a class="nav-link" href="nutrition.html"><i class="ph-bold ph-bowl-food"></i> Món ăn</a>
+      <a class="nav-link" href="workout.html"><i class="ph-bold ph-barbell"></i> Bài tập</a>
     </div>
     <div class="nav-right">
-      <span id="navUser" class="nav-user"></span>
-      <a id="navLogin" class="nav-link" href="login.html">Đăng nhập</a>
-      <a id="navLogout" class="nav-link" href="#" onclick="logout(); return false;">Đăng xuất</a>
+      <span class="nav-user-wrapper">
+        <i class="ph-bold ph-user-circle"></i>
+        <span id="navUser" class="nav-user"></span>
+      </span>
+      <a id="navLogin" class="nav-link" href="login.html"><i class="ph-bold ph-sign-in"></i> Đăng nhập</a>
+      <a id="navLogout" class="nav-link" href="#" onclick="logout(); return false;"><i class="ph-bold ph-sign-out"></i> Đăng xuất</a>
     </div>
   </nav>
 
@@ -73,64 +78,98 @@
 
     <section id="page-onboarding" class="section hidden">
       <h3>Onboarding: Chọn món ăn yêu thích</h3>
-      <div class="actions">
+      <div class="actions" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 15px;">
         <button onclick="loadPopularFoods()">20 món ăn phổ biến</button>
+        <div class="search-box" style="display: flex; gap: 5px; flex: 1; min-width: 250px;">
+          <input type="text" id="onboardSearchInput" placeholder="Tìm kiếm món ăn yêu thích..." style="flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e0; font-size: 14px;" onkeypress="if(event.key === 'Enter') searchOnboardFoods()" />
+          <button class="btn-primary" onclick="searchOnboardFoods()">Tìm kiếm</button>
+        </div>
         <button class="btn-success" onclick="saveFavorites()">Lưu món ăn yêu thích (Rating=5)</button>
       </div>
       <div id="popularFoods" class="food-list"></div>
       <div id="onboardMsg" class="muted"></div>
     </section>
 
-    <section id="page-dashboard" class="section hidden">
-      <h3>Dashboard</h3>
+    <section id="page-dashboard" class="dashboard-root-section hidden">
       <div class="safety-reminder">
-        Gợi ý món ăn chỉ mang tính tham khảo. Hãy lắng nghe cơ thể của bạn và hỏi chuyên gia nếu có bệnh nền, dị ứng hoặc dấu hiệu bất thường.
+        <i class="ph-bold ph-warning-circle"></i> Gợi ý món ăn chỉ mang tính tham khảo. Hãy lắng nghe cơ thể của bạn và hỏi chuyên gia nếu có bệnh nền, dị ứng hoặc dấu hiệu bất thường.
       </div>
-      <div class="grid-3">
-        <div class="card">
-          <div class="pill">Tiến trình Calo ngày</div>
-          <div class="progress" style="margin: 10px 0;">
-            <div id="caloBar" class="progress-bar"></div>
+      
+      <div class="split-dashboard-layout">
+        <!-- Sidebar Area (30% width) -->
+        <div class="sidebar-area">
+          
+          <div class="card sidebar-card progress-card">
+            <span class="pill"><i class="ph-bold ph-activity"></i> Tiến trình Calo</span>
+            <div class="progress" style="margin: 16px 0 10px;">
+              <div id="caloBar" class="progress-bar"></div>
+            </div>
+            <div class="muted" id="caloText">Chưa có dữ liệu</div>
           </div>
-          <div class="muted" id="caloText">Chưa có dữ liệu</div>
-        </div>
-        <div class="card">
-          <div class="pill">Điều khiển</div>
-          <div class="actions">
-            <button onclick="refreshDashboard(true)">Tải gợi ý mới</button>
-            <button class="btn-warning" onclick="refreshTdee()">Tính lại TDEE</button>
-            <button onclick="goToSurvey()">Cập nhật hồ sơ</button>
+          
+          <div class="card sidebar-card control-card">
+            <span class="pill"><i class="ph-bold ph-gear"></i> Bảng điều khiển</span>
+            <div class="actions vertical-actions">
+              <button class="btn-primary" onclick="refreshDashboard(true)">
+                <i class="ph-bold ph-arrows-counter-clockwise"></i> Tải gợi ý mới
+              </button>
+              <button class="btn-warning" onclick="refreshTdee()">
+                <i class="ph-bold ph-calculator"></i> Tính lại TDEE
+              </button>
+              <button class="btn-light" onclick="goToSurvey()">
+                <i class="ph-bold ph-pencil-simple"></i> Cập nhật hồ sơ
+              </button>
+            </div>
+            <div id="dashMsg" class="muted"></div>
           </div>
-          <div id="dashMsg" class="muted"></div>
+          
+          <div class="card sidebar-card log-card">
+            <span class="pill"><i class="ph-bold ph-note"></i> Nhật ký tương tác</span>
+            <textarea id="actionLog" readonly placeholder="Các hoạt động sẽ được ghi nhận tại đây..."></textarea>
+          </div>
+          
         </div>
-      </div>
-
-      <div class="dashboard-stack">
-        <div class="card">
-          <div class="pill">Bữa sáng </div>
-          <div id="breakfastList" class="food-list"></div>
-        </div>
-        <div class="card">
-          <div class="pill">Bữa trưa </div>
-          <div id="lunchList" class="food-list"></div>
-        </div>
-        <div class="card">
-          <div class="pill">Bữa tối</div>
-          <div id="dinnerList" class="food-list"></div>
-        </div>
-      </div>
-
-      <div class="dashboard-stack">
-        <div class="card">
-          <div class="pill">Bạn đánh giá bữa ăn ngày hôm nay ra sao! </div>
-          <div id="actionFoods" class="food-list"></div>
-        </div>
-      </div>
-
-      <div class="dashboard-stack">
-        <div class="card">
-          <div class="pill">Nhật ký tương tác</div>
-          <textarea id="actionLog" readonly></textarea>
+        
+        <!-- Main Content Area (70% width) -->
+        <div class="main-content-area">
+          
+          <!-- Tabbed Meal Plan Cards -->
+          <div class="meal-suggestions-wrapper">
+            <div class="section-title-row">
+              <h3><i class="ph-bold ph-cooking-pot"></i> Gợi ý thực đơn hôm nay</h3>
+            </div>
+            
+            <div class="card meal-card">
+              <div class="meal-card-header">
+                <span class="pill meal-time-pill breakfast-pill"><i class="ph-bold ph-sun-dim"></i> Bữa sáng</span>
+              </div>
+              <div id="breakfastList" class="food-list"></div>
+            </div>
+            
+            <div class="card meal-card">
+              <div class="meal-card-header">
+                <span class="pill meal-time-pill lunch-pill"><i class="ph-bold ph-sun"></i> Bữa trưa</span>
+              </div>
+              <div id="lunchList" class="food-list"></div>
+            </div>
+            
+            <div class="card meal-card">
+              <div class="meal-card-header">
+                <span class="pill meal-time-pill dinner-pill"><i class="ph-bold ph-moon"></i> Bữa tối</span>
+              </div>
+              <div id="dinnerList" class="food-list"></div>
+            </div>
+          </div>
+          
+          <!-- Rating system card -->
+          <div class="meal-ratings-wrapper">
+            <div class="card rating-card">
+              <span class="pill rating-pill"><i class="ph-bold ph-star"></i> Đánh giá bữa ăn hôm nay</span>
+              <p class="rating-instruction">Hãy chấm điểm để thuật toán AI Collaborative Filtering gợi ý chính xác hơn sở thích của bạn!</p>
+              <div id="actionFoods" class="food-list"></div>
+            </div>
+          </div>
+          
         </div>
       </div>
     </section>

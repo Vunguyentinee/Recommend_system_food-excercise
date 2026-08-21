@@ -28,13 +28,13 @@ public class HealthProfile {
     @Column(name = "Age")
     private Integer age;
 
-    @Column(name = "Gender", columnDefinition = "nvarchar(50)")
+    @Column(name = "Gender")
     private String gender;
 
     @Column(name = "Activity_Level")
     private Double activityLevel;
 
-    @Column(name = "Health_goal", columnDefinition = "nvarchar(100)")
+    @Column(name = "Health_goal")
     private String healthGoal;
 
     @Column(name = "BMI")
@@ -49,7 +49,7 @@ public class HealthProfile {
     @Column(name = "Last_updated")
     private LocalDateTime lastUpdated;
 
-    @Column(name = "Fitness_Level", columnDefinition = "nvarchar(255)")
+    @Column(name = "Fitness_Level")
     private String fitnessLevel;
 
     public Long getProfileId() {

@@ -22,16 +22,16 @@ public class WorkoutCollaborativeFilteringService {
 
     public boolean canUseForUser(long userId) {
         Integer userRatings = jdbcTemplate.queryForObject(
-            "SELECT COUNT(DISTINCT ExerciseID) FROM Interaction_Logs "
-                + "WHERE UserID = ? AND ExerciseID IS NOT NULL AND Rating IS NOT NULL",
+            "SELECT COUNT(DISTINCT exerciseid) FROM interaction_logs "
+                + "WHERE userid = ? AND exerciseid IS NOT NULL AND rating IS NOT NULL",
             Integer.class,
             userId
         );
         Integer exercisesWithEnoughRaters = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM ("
-                + "SELECT ExerciseID FROM Interaction_Logs "
-                + "WHERE ExerciseID IS NOT NULL AND Rating IS NOT NULL "
-                + "GROUP BY ExerciseID HAVING COUNT(DISTINCT UserID) >= ?"
+                + "SELECT exerciseid FROM interaction_logs "
+                + "WHERE exerciseid IS NOT NULL AND rating IS NOT NULL "
+                + "GROUP BY exerciseid HAVING COUNT(DISTINCT userid) >= ?"
                 + ") rated_exercises",
             Integer.class,
             MIN_EXERCISE_RATERS
@@ -73,20 +73,20 @@ public class WorkoutCollaborativeFilteringService {
 
     public Map<Long, Double> popularityScores() {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-            "SELECT ExerciseID AS exerciseId, COUNT(*) AS ratingCount, AVG(Rating) AS averageRating "
-                + "FROM Interaction_Logs WHERE ExerciseID IS NOT NULL AND Rating IS NOT NULL "
-                + "GROUP BY ExerciseID"
+            "SELECT exerciseid AS exerciseid, COUNT(*) AS ratingcount, AVG(rating) AS averagerating "
+                + "FROM interaction_logs WHERE exerciseid IS NOT NULL AND rating IS NOT NULL "
+                + "GROUP BY exerciseid"
         );
         double maximum = rows.stream()
-            .mapToDouble(row -> number(row.get("ratingCount")) * number(row.get("averageRating")))
+            .mapToDouble(row -> number(row.get("ratingcount")) * number(row.get("averagerating")))
             .max()
             .orElse(0.0);
         if (maximum <= 0) return Map.of();
 
         Map<Long, Double> scores = new HashMap<>();
         for (Map<String, Object> row : rows) {
-            long exerciseId = ((Number) row.get("exerciseId")).longValue();
-            double score = number(row.get("ratingCount")) * number(row.get("averageRating"));
+            long exerciseId = ((Number) row.get("exerciseid")).longValue();
+            double score = number(row.get("ratingcount")) * number(row.get("averagerating"));
             scores.put(exerciseId, score / maximum * 100.0);
         }
         return scores;
@@ -95,11 +95,11 @@ public class WorkoutCollaborativeFilteringService {
     public Map<Long, Double> userHighRatings(long userId) {
         Map<Long, Double> ratings = new HashMap<>();
         jdbcTemplate.query(
-            "SELECT ExerciseID, AVG(Rating) AS averageRating FROM Interaction_Logs "
-                + "WHERE UserID = ? AND ExerciseID IS NOT NULL AND Rating IS NOT NULL "
-                + "GROUP BY ExerciseID",
+            "SELECT exerciseid, AVG(rating) AS averagerating FROM interaction_logs "
+                + "WHERE userid = ? AND exerciseid IS NOT NULL AND rating IS NOT NULL "
+                + "GROUP BY exerciseid",
             (RowCallbackHandler) rs ->
-                ratings.put(rs.getLong("ExerciseID"), rs.getDouble("averageRating")),
+                ratings.put(rs.getLong("exerciseid"), rs.getDouble("averagerating")),
             userId
         );
         return ratings;
@@ -108,12 +108,12 @@ public class WorkoutCollaborativeFilteringService {
     private Map<Long, Map<Long, Double>> buildUserExerciseMatrix() {
         Map<Long, Map<Long, Double>> matrix = new HashMap<>();
         jdbcTemplate.query(
-            "SELECT UserID, ExerciseID, AVG(Rating) AS averageRating FROM Interaction_Logs "
-                + "WHERE ExerciseID IS NOT NULL AND Rating IS NOT NULL "
-                + "GROUP BY UserID, ExerciseID",
+            "SELECT userid, exerciseid, AVG(rating) AS averagerating FROM interaction_logs "
+                + "WHERE exerciseid IS NOT NULL AND rating IS NOT NULL "
+                + "GROUP BY userid, exerciseid",
             (RowCallbackHandler) rs -> matrix
-                .computeIfAbsent(rs.getLong("UserID"), ignored -> new HashMap<>())
-                .put(rs.getLong("ExerciseID"), rs.getDouble("averageRating"))
+                .computeIfAbsent(rs.getLong("userid"), ignored -> new HashMap<>())
+                .put(rs.getLong("exerciseid"), rs.getDouble("averagerating"))
         );
         return matrix;
     }

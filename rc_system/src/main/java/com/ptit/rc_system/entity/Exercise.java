@@ -15,28 +15,28 @@ public class Exercise {
     @Column(name = "ExerciseID")
     private Integer exerciseId;
 
-    @Column(name = "Name", nullable = false, columnDefinition = "nvarchar(255)")
+    @Column(name = "Name", nullable = false)
     private String name;
 
-    @Column(name = "Target_muscle", columnDefinition = "nvarchar(255)")
+    @Column(name = "Target_muscle")
     private String targetMuscle;
 
-    @Column(name = "Type", columnDefinition = "nvarchar(255)")
+    @Column(name = "Type")
     private String type;
 
-    @Column(name = "Level", columnDefinition = "nvarchar(255)")
+    @Column(name = "Level")
     private String level;
 
-    @Column(name = "Goal_Tag", columnDefinition = "nvarchar(255)")
+    @Column(name = "Goal_Tag")
     private String goalTag;
 
-    @Column(name = "Equipment", columnDefinition = "nvarchar(255)")
+    @Column(name = "Equipment")
     private String equipment;
 
     @Column(name = "Min_Sets")
     private Integer minSets;
 
-    @Column(name = "Min_Reps", columnDefinition = "nvarchar(20)")
+    @Column(name = "Min_Reps")
     private String minReps;
 
     @Column(name = "Max_Sets")
@@ -48,7 +48,7 @@ public class Exercise {
     @Column(name = "Default_Rest_Seconds")
     private Integer defaultRestSeconds;
 
-    @Column(name = "Instructions", columnDefinition = "nvarchar(max)")
+    @Column(name = "Instructions", columnDefinition = "text")
     private String instructions;
 
     @Column(name = "Met_Value")

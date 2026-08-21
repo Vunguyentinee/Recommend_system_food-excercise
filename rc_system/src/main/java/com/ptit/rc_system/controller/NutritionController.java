@@ -9,6 +9,7 @@ import com.ptit.rc_system.service.AiRecommendationClient;
 import com.ptit.rc_system.service.FoodCollaborativeFilteringService;
 import com.ptit.rc_system.service.NutritionCalculationService;
 import com.ptit.rc_system.service.NutritionRecommendationService;
+import com.ptit.rc_system.security.OwnershipGuard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "*")
 @RestController
 public class NutritionController {
     private static final Logger logger = LoggerFactory.getLogger(NutritionController.class);
@@ -43,12 +43,16 @@ public class NutritionController {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private OwnershipGuard ownershipGuard;
+
     // ===== ENDPOINT 1: User-Based CF =====
     @GetMapping("/api/recommend-cf")
     public Object recommendByCollaborativeFiltering(
             @RequestParam Long userId,
             @RequestParam(defaultValue = "5") int topK) {
 
+        ownershipGuard.checkSelfOrAdmin(userId);
         boolean userExists = interactionLogRepository.existsByUserId(userId);
         if (!userExists) {
             logger.warn("❌ User {} does not exist", userId);
@@ -79,6 +83,7 @@ public class NutritionController {
             @RequestParam Long userId,
             @RequestParam(defaultValue = "5") int topK) {
 
+        ownershipGuard.checkSelfOrAdmin(userId);
         boolean userExists = interactionLogRepository.existsByUserId(userId);
         if (!userExists) {
             return createErrorResponse("User not found", "USER_NOT_FOUND");
@@ -109,6 +114,7 @@ public class NutritionController {
             @RequestParam(defaultValue = "5") int topK,
             @RequestParam(defaultValue = "0.6") double userWeight) {
 
+        ownershipGuard.checkSelfOrAdmin(userId);
         boolean userExists = interactionLogRepository.existsByUserId(userId);
         if (!userExists) {
             return createErrorResponse("User not found", "USER_NOT_FOUND");
@@ -193,6 +199,9 @@ public class NutritionController {
             @RequestParam(defaultValue = "true") boolean isTraditional,
             @RequestParam(defaultValue = "5") int topK) {
 
+        if (userId != null) {
+            ownershipGuard.checkSelfOrAdmin(userId);
+        }
         return nutritionRecommendationService.recommendSmart(userId, weight, height, age, gender,
                 activityLevel, healthGoal, isTraditional, topK);
     }
@@ -219,12 +228,14 @@ public class NutritionController {
             @RequestParam Long userId,
             @RequestParam(defaultValue = "5") int topK) {
 
+        ownershipGuard.checkSelfOrAdmin(userId);
         return nutritionRecommendationService.suggestAfterRating(userId, topK);
     }
 
     // ===== API: Get User Rating History =====
     @GetMapping("/api/user-ratings/{userId}")
     public Object getUserRatings(@PathVariable Long userId) {
+        ownershipGuard.checkSelfOrAdmin(userId);
         List<InteractionLog> logs = interactionLogRepository.findByUserIdAndRatingIsNotNull(userId);
 
         Map<String, Object> response = new HashMap<>();
@@ -242,6 +253,7 @@ public class NutritionController {
     // ===== API: Get Recommendation Status =====
     @GetMapping("/api/user-status/{userId}")
     public Object getUserStatus(@PathVariable Long userId) {
+        ownershipGuard.checkSelfOrAdmin(userId);
         List<InteractionLog> logs = interactionLogRepository.findByUserIdAndRatingIsNotNull(userId);
         boolean userExists = !logs.isEmpty();
 

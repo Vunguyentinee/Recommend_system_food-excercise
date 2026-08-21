@@ -5,6 +5,8 @@ import com.ptit.rc_system.entity.Food;
 import com.ptit.rc_system.entity.InteractionLog;
 import com.ptit.rc_system.repository.FoodRepository;
 import com.ptit.rc_system.repository.InteractionLogRepository;
+import com.ptit.rc_system.repository.HealthProfileRepository;
+import com.ptit.rc_system.entity.HealthProfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,10 +40,14 @@ public class NutritionRecommendationService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private HealthProfileRepository healthProfileRepository;
+
     // ===== TRIPLE HYBRID RECOMMENDATION =====
     public Map<String, Object> recommendTripleHybrid(Long userId, Double weight, Double height,
                                                      Integer age, String gender, Double activityLevel,
-                                                     String healthGoal, boolean isTraditional, int topK) {
+                                                     String healthGoal, boolean isTraditional, int topK,
+                                                     Set<Long> excludedFoodIds) {
         logger.info("🔄 Triple Hybrid: CF (60%) + Content-Based (40%)");
 
         // 60% từ Hybrid CF (gọi Python service)
@@ -90,6 +96,13 @@ public class NutritionRecommendationService {
     public Map<String, Object> recommendSmart(Long userId, Double weight, Double height,
                                               Integer age, String gender, Double activityLevel,
                                               String healthGoal, boolean isTraditional, int topK) {
+        return recommendSmart(userId, weight, height, age, gender, activityLevel, healthGoal, isTraditional, topK, Set.of());
+    }
+
+    public Map<String, Object> recommendSmart(Long userId, Double weight, Double height,
+                                              Integer age, String gender, Double activityLevel,
+                                              String healthGoal, boolean isTraditional, int topK,
+                                              Set<Long> excludedFoodIds) {
         logger.info("🔍 Smart Recommend called: userId={}, hasProfile={}",
                 userId, weight != null && height != null);
 
@@ -105,13 +118,13 @@ public class NutritionRecommendationService {
                 double targetCalories = nutritionService.caculateTargetCalories(tdee, healthGoal, gender);
                 
                 Map<String, Object> responseMap = recommendTripleHybrid(userId, weight, height, age, gender,
-                        activityLevel, healthGoal, isTraditional, topK);
+                        activityLevel, healthGoal, isTraditional, topK, excludedFoodIds);
 
                 @SuppressWarnings("unchecked")
                 List<Food> data = (List<Food>) responseMap.getOrDefault("data", List.of());
 
                 Map<String, List<Map<String, Object>>> meals = buildDailyPlan(
-                        data, foodRepository.findAll(), targetCalories);
+                        data, foodRepository.findAll(), targetCalories, excludedFoodIds);
                 List<Map<String, Object>> flat = flattenMeals(meals);
                 if (!flat.isEmpty()) {
                     Map<String, Object> payload = createResponse(flat, "TRIPLE_HYBRID_DAILY", topK);
@@ -122,7 +135,7 @@ public class NutritionRecommendationService {
                 List<FoodPortion> fallback = nutritionService.generateLunchCombo(targetCalories, foodRepository.findAll(), isTraditional);
                 List<Food> fallbackFoods = fallback.stream().map(FoodPortion::getFood).toList();
                 Map<String, List<Map<String, Object>>> fallbackMeals = buildDailyPlan(
-                        fallbackFoods, foodRepository.findAll(), targetCalories);
+                        fallbackFoods, foodRepository.findAll(), targetCalories, excludedFoodIds);
                 Map<String, Object> payload = createResponse(flattenMeals(fallbackMeals), "CONTENT_BASED_FOR_MEAL_STYLE", topK);
                 payload.put("meals", fallbackMeals);
                 return payload;
@@ -149,7 +162,7 @@ public class NutritionRecommendationService {
                 recs = fillToTopK(recs, topK);
 
                 List<Food> foods = foodRepository.findAllById(recs);
-                Map<String, List<Map<String, Object>>> meals = buildDailyPlan(foods, foodRepository.findAll());
+                Map<String, List<Map<String, Object>>> meals = buildDailyPlan(foods, foodRepository.findAll(), null, excludedFoodIds);
                 Map<String, Object> payload = createResponse(flattenMeals(meals), "HYBRID_CF_DAILY", topK);
                 payload.put("meals", meals);
                 return payload;
@@ -172,7 +185,7 @@ public class NutritionRecommendationService {
             List<Food> candidateFoods = result.stream().map(FoodPortion::getFood).toList();
 
             Map<String, List<Map<String, Object>>> meals = buildDailyPlan(
-                    candidateFoods, allFoods, targetCalories);
+                    candidateFoods, allFoods, targetCalories, excludedFoodIds);
             Map<String, Object> payload = createResponse(flattenMeals(meals), "CONTENT_BASED_DAILY", topK);
             payload.put("meals", meals);
             return payload;
@@ -182,7 +195,7 @@ public class NutritionRecommendationService {
         logger.info("✅ CASE 4: NEW User + NO Profile → Popularity-Based");
         List<Long> popularFoods = collaborativeFilteringService.getPopularFoods(topK);
         List<Food> popular = foodRepository.findAllById(popularFoods);
-        Map<String, List<Map<String, Object>>> meals = buildDailyPlan(popular, foodRepository.findAll());
+        Map<String, List<Map<String, Object>>> meals = buildDailyPlan(popular, foodRepository.findAll(), null, excludedFoodIds);
         Map<String, Object> payload = createResponse(flattenMeals(meals), "POPULARITY_DAILY", topK);
         payload.put("meals", meals);
         return payload;
@@ -237,20 +250,43 @@ public class NutritionRecommendationService {
 
     // ===== GET LATEST PROFILE FOR PLAN =====
     public Map<String, Object> loadLatestProfileForPlan(Long userId) {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT TOP 1 Weight AS weight, Height AS height, Age AS age, Gender AS gender, "
-                        + "Activity_Level AS activityLevel, Health_goal AS healthGoal, "
-                        + "Target_Calories AS targetCalories "
-                        + "FROM Health_Profiles WHERE UserID = ? "
-                        + "ORDER BY Last_updated DESC, ProfileID DESC",
-                userId
-        );
-        return rows.isEmpty() ? Map.of() : rows.get(0);
+        Optional<HealthProfile> profileOpt = healthProfileRepository.findTopByUserIdOrderByLastUpdatedDescProfileIdDesc(userId);
+        if (profileOpt.isEmpty()) {
+            return Map.of();
+        }
+        HealthProfile p = profileOpt.get();
+        Map<String, Object> map = new HashMap<>();
+        map.put("weight", p.getWeight());
+        map.put("height", p.getHeight());
+        map.put("age", p.getAge());
+        map.put("gender", p.getGender());
+        map.put("activityLevel", p.getActivityLevel());
+        map.put("healthGoal", p.getHealthGoal());
+        map.put("targetCalories", p.getTargetCalories());
+        return map;
     }
 
     // ===== GENERATE MEALS FOR USER =====
     @SuppressWarnings("unchecked")
     public Map<String, List<Map<String, Object>>> generateMealsForUser(Long userId, Map<String, Object> profile) {
+        Set<Long> excludedFoodIds = new HashSet<>();
+        try {
+            Integer planId = jdbcTemplate.queryForObject(
+                "SELECT planid FROM daily_plans WHERE userid = ? AND plandate = ?",
+                Integer.class, userId, java.time.LocalDate.now()
+            );
+            if (planId != null) {
+                List<Long> foodIds = jdbcTemplate.query(
+                    "SELECT foodid FROM plan_details WHERE planid = ? AND item_type = 'FOOD'",
+                    (rs, rowNum) -> rs.getLong("foodid"),
+                    planId
+                );
+                excludedFoodIds.addAll(foodIds);
+            }
+        } catch (Exception e) {
+            // expected if no plan exists yet
+        }
+
         Object response = recommendSmart(
                 userId,
                 numberOrNull(profile.get("weight")),
@@ -260,7 +296,8 @@ public class NutritionRecommendationService {
                 numberOrNull(profile.get("activityLevel")),
                 stringOrNull(profile.get("healthGoal")),
                 true,
-                9
+                9,
+                excludedFoodIds
         );
         Map<String, Object> responseMap = response instanceof Map ? (Map<String, Object>) response : Map.of();
         Object meals = responseMap.get("meals");
@@ -271,17 +308,22 @@ public class NutritionRecommendationService {
             }
             return typedMeals;
         }
-        return buildDailyPlan(foodRepository.findAll().stream().limit(9).toList(), foodRepository.findAll());
+        return buildDailyPlan(foodRepository.findAll().stream().limit(9).toList(), foodRepository.findAll(), null, excludedFoodIds);
     }
 
     // ===== PLAN BUILDERS AND CALORIE BALANCE =====
     private Map<String, List<Map<String, Object>>> buildDailyPlan(List<Food> candidates, List<Food> fallbackFoods) {
-        return buildDailyPlan(candidates, fallbackFoods, null);
+        return buildDailyPlan(candidates, fallbackFoods, null, Set.of());
     }
 
     private Map<String, List<Map<String, Object>>> buildDailyPlan(List<Food> candidates, List<Food> fallbackFoods,
                                                                   Double targetCalories) {
-        Set<Long> usedIds = new HashSet<>();
+        return buildDailyPlan(candidates, fallbackFoods, targetCalories, Set.of());
+    }
+
+    private Map<String, List<Map<String, Object>>> buildDailyPlan(List<Food> candidates, List<Food> fallbackFoods,
+                                                                  Double targetCalories, Set<Long> excludedFoodIds) {
+        Set<Long> usedIds = new HashSet<>(excludedFoodIds);
         Map<String, List<Map<String, Object>>> meals = new LinkedHashMap<>();
 
         String mixedMealKey = pickRandomMixedMealKey();

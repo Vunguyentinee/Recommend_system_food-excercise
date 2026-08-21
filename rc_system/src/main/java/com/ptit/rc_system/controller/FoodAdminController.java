@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
-@CrossOrigin(origins = "*")
 @RestController
 public class FoodAdminController {
 

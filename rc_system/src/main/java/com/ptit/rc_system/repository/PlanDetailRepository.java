@@ -34,6 +34,12 @@ public interface PlanDetailRepository extends JpaRepository<PlanDetail, Integer>
     List<Integer> findExerciseIds(@Param("planId") Integer planId, @Param("itemType") String itemType);
 
     @Query("""
+        SELECT pd.foodId FROM PlanDetail pd
+        WHERE pd.dailyPlan.planId = :planId AND pd.itemType = :itemType
+        """)
+    List<Integer> findFoodIds(@Param("planId") Integer planId, @Param("itemType") String itemType);
+
+    @Query("""
         SELECT pd FROM PlanDetail pd
         JOIN FETCH pd.exercise
         WHERE pd.detailId = :detailId

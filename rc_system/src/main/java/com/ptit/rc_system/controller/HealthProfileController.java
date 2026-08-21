@@ -2,6 +2,7 @@ package com.ptit.rc_system.controller;
 
 import com.ptit.rc_system.entity.HealthProfile;
 import com.ptit.rc_system.repository.HealthProfileRepository;
+import com.ptit.rc_system.security.OwnershipGuard;
 import com.ptit.rc_system.service.NutritionCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -13,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-@CrossOrigin(origins = "*")
 @RestController
 public class HealthProfileController {
 
@@ -23,8 +23,12 @@ public class HealthProfileController {
     @Autowired
     private NutritionCalculationService nutritionService;
 
+    @Autowired
+    private OwnershipGuard ownershipGuard;
+
     @GetMapping("/api/health-profiles/{userId}")
     public ResponseEntity<Map<String, Object>> getHealthProfile(@PathVariable Long userId) {
+        ownershipGuard.checkSelfOrAdmin(userId);
         Optional<HealthProfile> profileOpt = healthProfileRepository.findTopByUserIdOrderByLastUpdatedDescProfileIdDesc(userId);
         if (profileOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -54,6 +58,7 @@ public class HealthProfileController {
         if (payload.userId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
+        ownershipGuard.checkSelfOrAdmin(payload.userId);
 
         double bmr = nutritionService.calculateBMR(
                 safeDouble(payload.weight),

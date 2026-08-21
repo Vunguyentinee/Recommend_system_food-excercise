@@ -168,28 +168,28 @@ public class NutritionPlanService {
         LocalDate targetDate = date == null ? LocalDate.now() : date;
 
         List<Map<String, Object>> items = jdbcTemplate.query(
-                "SELECT pd.DetailID, dp.UserID, pd.FoodID, f.Name, f.Calories, f.Category, f.Serving_Unit, "
-                        + "pd.Rating, pd.Is_completed, pd.Workout_Phase AS Meal_Time, pd.Completed_At "
-                        + "FROM Plan_Details pd "
-                        + "JOIN Daily_Plans dp ON dp.PlanID = pd.PlanID "
-                        + "JOIN Food_Library f ON f.FoodID = pd.FoodID "
-                        + "WHERE dp.UserID = ? AND dp.PlanDate = ? "
-                        + "AND pd.Item_type = 'FOOD' AND pd.Is_completed = 1 "
-                        + "ORDER BY pd.Completed_At DESC, pd.Sort_Order",
+                "SELECT pd.detailid AS detailid, dp.userid AS userid, pd.foodid AS foodid, f.name AS name, f.calories AS calories, f.category AS category, f.serving_unit AS serving_unit, "
+                        + "pd.rating AS rating, pd.is_completed AS is_completed, pd.workout_phase AS meal_time, pd.completed_at AS completed_at "
+                        + "FROM plan_details pd "
+                        + "JOIN daily_plans dp ON dp.planid = pd.planid "
+                        + "JOIN food_library f ON f.foodid = pd.foodid "
+                        + "WHERE dp.userid = ? AND dp.plandate = ? "
+                        + "AND pd.item_type = 'FOOD' AND pd.is_completed = true "
+                        + "ORDER BY pd.completed_at DESC, pd.sort_order",
                 (rs, rowNum) -> {
                     Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("detailId", rs.getLong("DetailID"));
-                    item.put("userId", rs.getLong("UserID"));
-                    item.put("foodId", rs.getLong("FoodID"));
-                    item.put("name", rs.getString("Name"));
-                    item.put("calories", rs.getDouble("Calories"));
-                    item.put("category", rs.getString("Category"));
-                    item.put("servingUnit", rs.getString("Serving_Unit"));
+                    item.put("detailId", rs.getLong("detailid"));
+                    item.put("userId", rs.getLong("userid"));
+                    item.put("foodId", rs.getLong("foodid"));
+                    item.put("name", rs.getString("name"));
+                    item.put("calories", rs.getDouble("calories"));
+                    item.put("category", rs.getString("category"));
+                    item.put("servingUnit", rs.getString("serving_unit"));
                     item.put("interactionType", "Food_Survey");
-                    item.put("rating", rs.getObject("Rating"));
-                    item.put("completed", rs.getBoolean("Is_completed"));
-                    item.put("mealTime", rs.getString("Meal_Time"));
-                    item.put("logDate", rs.getTimestamp("Completed_At"));
+                    item.put("rating", rs.getObject("rating"));
+                    item.put("completed", rs.getBoolean("is_completed"));
+                    item.put("mealTime", rs.getString("meal_time"));
+                    item.put("logDate", rs.getTimestamp("completed_at"));
                     return item;
                 },
                 userId, targetDate
@@ -197,28 +197,29 @@ public class NutritionPlanService {
 
         if (items.isEmpty()) {
             items = jdbcTemplate.query(
-                    "SELECT l.LogID, l.UserID, l.FoodID, f.Name, f.Calories, f.Category, f.Serving_Unit, "
-                            + "l.Interaction_type, l.Rating, l.Is_completed, l.Meal_Time, l.Log_date "
-                            + "FROM Interaction_Logs l "
-                            + "JOIN Food_Library f ON f.FoodID = l.FoodID "
-                            + "WHERE l.UserID = ? AND l.FoodID IS NOT NULL "
-                            + "AND CAST(l.Log_date AS date) = ? "
-                            + "AND l.Interaction_type = 'Food_Survey' "
-                            + "ORDER BY l.Log_date DESC",
+                    "SELECT l.logid AS logid, l.userid AS userid, l.foodid AS foodid, f.name AS name, f.calories AS calories, f.category AS category, f.serving_unit AS serving_unit, "
+                            + "l.interaction_type AS interaction_type, l.rating AS rating, l.is_completed AS is_completed, l.meal_time AS meal_time, l.log_date AS log_date "
+                            + "FROM interaction_logs l "
+                            + "JOIN food_library f ON f.foodid = l.foodid "
+                            + "WHERE l.userid = ? AND l.foodid IS NOT NULL "
+                            + "AND CAST(l.log_date AS date) = ? "
+                            + "AND l.interaction_type = 'Food_Survey' "
+                            + "AND l.plandetailid IS NOT NULL "
+                            + "ORDER BY l.log_date DESC",
                     (rs, rowNum) -> {
                         Map<String, Object> item = new LinkedHashMap<>();
-                        item.put("logId", rs.getLong("LogID"));
-                        item.put("userId", rs.getLong("UserID"));
-                        item.put("foodId", rs.getLong("FoodID"));
-                        item.put("name", rs.getString("Name"));
-                        item.put("calories", rs.getDouble("Calories"));
-                        item.put("category", rs.getString("Category"));
-                        item.put("servingUnit", rs.getString("Serving_Unit"));
-                        item.put("interactionType", rs.getString("Interaction_type"));
-                        item.put("rating", rs.getObject("Rating"));
-                        item.put("completed", rs.getBoolean("Is_completed"));
-                        item.put("mealTime", rs.getString("Meal_Time"));
-                        item.put("logDate", rs.getTimestamp("Log_date"));
+                        item.put("logId", rs.getLong("logid"));
+                        item.put("userId", rs.getLong("userid"));
+                        item.put("foodId", rs.getLong("foodid"));
+                        item.put("name", rs.getString("name"));
+                        item.put("calories", rs.getDouble("calories"));
+                        item.put("category", rs.getString("category"));
+                        item.put("servingUnit", rs.getString("serving_unit"));
+                        item.put("interactionType", rs.getString("interaction_type"));
+                        item.put("rating", rs.getObject("rating"));
+                        item.put("completed", rs.getBoolean("is_completed"));
+                        item.put("mealTime", rs.getString("meal_time"));
+                        item.put("logDate", rs.getTimestamp("log_date"));
                         return item;
                     },
                     userId, targetDate

@@ -3,30 +3,195 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Đăng nhập</title>
+  <title>Đăng Nhập - Smart Health & Fitness</title>
+  
+  <!-- CSS Stylesheets -->
   <link rel="stylesheet" href="css/login.css">
+  
+  <!-- Phosphor Icons (CDN) -->
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/style.css" />
 </head>
 <body>
-  <div class="card">
-    <h2>Đăng nhập</h2>
-    <div class="muted">Đăng nhập để vào DashBoard</div>
 
-    <label>UserName</label>
-    <input id="loginUserName" placeholder="Nguyen Van A" />
-
-    <label>Mật khẩu</label>
-    <input id="loginPassword" type="password" placeholder="Nhập mật khẩu" />
-
-    <button class="btn-success" onclick="login()">Đăng nhập</button>
-    <div class="actions">
-      <button onclick="goRegister()">Đăng ký</button>
-<!--      <button onclick="goDashboard()">Vào thẳng Dashboard</button>-->
+  <div class="split-container">
+    
+    <!-- Left Panel: Energetic Graphic Hero -->
+    <div class="hero-panel">
+      <div class="hero-header">
+        <div class="brand-logo">
+          <i class="ph-bold ph-heartbeat"></i>
+          <span>Goodhealth.ai</span>
+        </div>
+      </div>
+      
+      <div class="hero-content">
+        <h1 class="hero-title">
+           For a healthy <br>
+          <span class="highlight"> future</span>
+        </h1>
+        <p class="hero-subtitle">
+          Khởi đầu hành trình sống khỏe thông minh. Đăng nhập ngay để tiếp tục theo dõi thực đơn dinh dưỡng và chương trình tập luyện cá nhân hóa từ AI.
+        </p>
+        
+        <!-- Bento-style Widget Cards -->
+        <div class="hero-widgets">
+          
+          <div class="widget-card">
+            <div class="widget-icon-row">
+              <i class="ph-bold ph-fire rose"></i>
+              <span class="widget-badge">Hôm nay</span>
+            </div>
+            <div>
+              <div class="widget-value">560 kcal</div>
+              <div class="widget-desc">Đốt cháy mục tiêu tập luyện</div>
+            </div>
+          </div>
+          
+          <div class="widget-card">
+            <div class="widget-icon-row">
+              <i class="ph-bold ph-bowl-food blue"></i>
+              <span class="widget-badge">Chế độ</span>
+            </div>
+            <div>
+              <div class="widget-value">2,100 kcal</div>
+              <div class="widget-desc">Dinh dưỡng chuẩn cá nhân</div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <div class="hero-footer">
+        <p>© 2026 goodhealth.ai. Hành trình sức khỏe thông minh của bạn.<br>
+        Dữ liệu dinh dưỡng được tham khảo từ Viện dinh dưỡng quốc gia Việt Nam.<br>
+      Dữ liệu bài tập được tham khảo từ Muscle.wiki.<br>
+      Web được xây dựng không nhằm mục đích thương mại.</p>
+      </div>
     </div>
-
-    <div id="loginMsg" class="muted" style="margin-top: 8px;"></div>
+    
+    <!-- Right Panel: Login Form -->
+    <div class="form-panel">
+      <div class="register-card">
+        
+        <div class="card-header">
+          <h2>Đăng Nhập</h2>
+          <p>Đăng nhập để vào Dashboard sức khỏe của riêng bạn</p>
+        </div>
+        
+        <!-- Login Form -->
+        <div class="register-form">
+          
+          <!-- Username Input -->
+          <div class="input-group">
+            <label for="loginUserName">
+              <i class="ph-bold ph-user-circle"></i> Tên người dùng
+            </label>
+            <div class="input-wrapper">
+              <input id="loginUserName" type="text" placeholder="Nguyen Van A" autocomplete="username" />
+              <i class="ph-bold ph-user input-icon"></i>
+            </div>
+          </div>
+          
+          <!-- Password Input -->
+          <div class="input-group">
+            <label for="loginPassword">
+              <i class="ph-bold ph-lock-key"></i> Mật khẩu bảo mật
+            </label>
+            <div class="input-wrapper">
+              <input id="loginPassword" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password" />
+              <i class="ph-bold ph-key input-icon"></i>
+              <button type="button" class="password-toggle" onclick="togglePassword()" aria-label="Hiển thị mật khẩu">
+                <i class="ph-bold ph-eye-slash"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Dynamic Alert Message (Observed by JS below) -->
+          <div id="loginMsg" class="register-message"></div>
+          
+          <!-- Action Buttons -->
+          <button class="btn-register" onclick="login()">
+            Đăng nhập <i class="ph-bold ph-sign-in"></i>
+          </button>
+          
+          <div class="form-divider">Hoặc</div>
+          
+          <button class="btn-back-login" onclick="goRegister()">
+            Tạo tài khoản mới <i class="ph-bold ph-user-plus"></i>
+          </button>
+          
+        </div>
+        
+      </div>
+    </div>
+    
   </div>
 
+  <!-- Original business logic script -->
   <script src="js/login.js"></script>
+
+  <!-- UX enhancements and dynamic UI adjustments -->
+  <script>
+    // 1. Password Visibility Toggle
+    function togglePassword() {
+      const passwordInput = document.getElementById('loginPassword');
+      const toggleBtnIcon = document.querySelector('.password-toggle i');
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleBtnIcon.className = 'ph-bold ph-eye';
+      } else {
+        passwordInput.type = 'password';
+        toggleBtnIcon.className = 'ph-bold ph-eye-slash';
+      }
+    }
+
+    // 2. MutationObserver to style the standard loginMsg box dynamically
+    document.addEventListener('DOMContentLoaded', () => {
+      const msgEl = document.getElementById('loginMsg');
+      if (msgEl) {
+        const observerOptions = { 
+          childList: true, 
+          characterData: true, 
+          subtree: true, 
+          attributes: true, 
+          attributeFilter: ['style'] 
+        };
+        
+        const observer = new MutationObserver(() => {
+          // Avoid matching icon text or tags
+          let text = msgEl.innerText || msgEl.textContent;
+          text = text.replace(/[\n\r]/g, '').trim();
+          
+          if (!text) {
+            msgEl.className = 'register-message'; // Hides when empty
+            return;
+          }
+          
+          // Disconnect to avoid triggering the observer recursively
+          observer.disconnect();
+          
+          const color = msgEl.style.color;
+          msgEl.className = 'register-message active';
+          
+          // Classify message based on color styles set in login.js or content words
+          if (color === 'rgb(56, 161, 105)' || color === '#38a169' || text.includes('thành công') || text.includes('Thành công')) {
+            msgEl.innerHTML = `<i class="ph-bold ph-check-circle" style="color: var(--success)"></i> <span>${text}</span>`;
+            msgEl.className = 'register-message active success';
+          } else if (color === 'rgb(229, 62, 62)' || color === '#e53e3e' || text.includes('thất bại') || text.includes('Lỗi') || text.includes('chưa chính xác') || text.includes('Vui lòng')) {
+            msgEl.innerHTML = `<i class="ph-bold ph-warning-circle" style="color: var(--error)"></i> <span>${text}</span>`;
+            msgEl.className = 'register-message active error';
+          } else {
+            msgEl.innerHTML = `<i class="ph-bold ph-info" style="color: var(--info)"></i> <span>${text}</span>`;
+            msgEl.className = 'register-message active info';
+          }
+          
+          // Reconnect observer
+          observer.observe(msgEl, observerOptions);
+        });
+        
+        observer.observe(msgEl, observerOptions);
+      }
+    });
+  </script>
 </body>
 </html>
-

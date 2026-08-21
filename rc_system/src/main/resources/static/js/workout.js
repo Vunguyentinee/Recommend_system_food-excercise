@@ -1,6 +1,24 @@
 let workoutPlan = null;
     let workoutHistory = null;
 
+    function baseUrl() {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return window.location.origin;
+      }
+      return "https://rc-system-health-backend.onrender.com";
+    }
+
+    const MEDIA_BASE_URL = ""; // Change to CDN / Cloud Storage URL if migrating assets (e.g. "https://res.cloudinary.com/your-cloud-name")
+
+    function resolveMediaUrl(url) {
+      if (!url) return "";
+      if (url.startsWith("http://") || url.startsWith("https://")) {
+        return url;
+      }
+      const basePath = MEDIA_BASE_URL || "";
+      return basePath + url;
+    }
+
     function getTodayKey() {
       const now = new Date();
       const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -11,6 +29,15 @@ let workoutPlan = null;
     function getSession() {
       const raw = localStorage.getItem('session');
       return raw ? JSON.parse(raw) : null;
+    }
+
+    function authFetch(url, options = {}) {
+      const session = getSession();
+      const headers = new Headers(options.headers || {});
+      if (session && session.token) {
+        headers.set('Authorization', 'Bearer ' + session.token);
+      }
+      return fetch(url, Object.assign({}, options, { headers }));
     }
 
     function ensureSession() {
@@ -60,7 +87,7 @@ let workoutPlan = null;
     function hydrateSessionUser(session) {
       renderNavbar(session);
       if (!session || session.userName) return;
-      fetch(`${window.location.origin}/api/auth/users/${session.userId}`)
+      authFetch(`${baseUrl()}/api/auth/users/${session.userId}`)
         .then(res => res.ok ? res.json() : null)
         .then(user => {
           if (!user) return;
@@ -72,7 +99,7 @@ let workoutPlan = null;
     }
 
     function apiJson(url, options) {
-      return fetch(url, options).then(res => res.json().then(data => {
+      return authFetch(url, options).then(res => res.json().then(data => {
         if (!res.ok) throw new Error(data.message || 'Không thể xử lý yêu cầu.');
         return data;
       }));
@@ -82,7 +109,7 @@ let workoutPlan = null;
       const session = ensureSession();
       if (!session) return;
       const query = new URLSearchParams({ userId: session.userId, regenerate });
-      apiJson(`${window.location.origin}/api/workouts/recommend?${query}`)
+      apiJson(`${baseUrl()}/api/workouts/recommend?${query}`)
         .then(data => {
           workoutPlan = data;
           document.getElementById('workoutMessage').textContent =
@@ -98,7 +125,7 @@ let workoutPlan = null;
       const session = ensureSession();
       if (!session) return Promise.resolve();
       const query = new URLSearchParams({ userId: session.userId, date: getTodayKey() });
-      return apiJson(`${window.location.origin}/api/workouts/history?${query}`)
+      return apiJson(`${baseUrl()}/api/workouts/history?${query}`)
         .then(data => {
           workoutHistory = data;
           renderWorkoutHistory();
@@ -109,7 +136,7 @@ let workoutPlan = null;
     function completeWorkout(detailId) {
       const session = ensureSession();
       if (!session) return;
-      apiJson(`${window.location.origin}/api/workouts/complete`, {
+      apiJson(`${baseUrl()}/api/workouts/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: session.userId, detailId })
@@ -121,7 +148,7 @@ let workoutPlan = null;
     function rateWorkout(detailId, rating) {
       const session = ensureSession();
       if (!session) return;
-      apiJson(`${window.location.origin}/api/workouts/rate`, {
+      apiJson(`${baseUrl()}/api/workouts/rate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: session.userId, detailId, rating })
@@ -136,7 +163,7 @@ let workoutPlan = null;
         <article class="card">
           <video class="workout-preview" autoplay muted loop playsinline preload="metadata"
                  onclick="openWorkoutDetails(${workout.detailId})">
-            <source src="${escapeHtml(workout.videoUrl)}" type="video/mp4" />
+            <source src="${escapeHtml(resolveMediaUrl(workout.videoUrl))}" type="video/mp4" />
           </video>
           <span class="pill">${escapeHtml(workout.level)}</span>
           <span class="pill phase">${escapeHtml(workout.phase)}</span>
@@ -204,7 +231,7 @@ let workoutPlan = null;
       const workout = workoutPlan?.data?.find(item => item.detailId === detailId);
       if (!workout) return;
       const video = document.getElementById('modalVideo');
-      video.src = workout.videoUrl;
+      video.src = resolveMediaUrl(workout.videoUrl);
       video.load();
       video.play().catch(() => {});
       document.getElementById('modalTitle').textContent = workout.name;

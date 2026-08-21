@@ -1,5 +1,6 @@
 package com.ptit.rc_system.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,6 +16,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 
 @Configuration
@@ -22,6 +24,9 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtRequestFilter jwtRequestFilter;
+
+    @Value("${app.cors.allowed-origin-patterns:http://localhost:*,http://127.0.0.1:*,https://rc-system-health-backend.onrender.com}")
+    private List<String> allowedOriginPatterns;
 
     public SecurityConfig(JwtRequestFilter jwtRequestFilter) {
         this.jwtRequestFilter = jwtRequestFilter;
@@ -46,21 +51,28 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             // Cấu hình các API được phép truy cập
             .authorizeHttpRequests(auth -> auth
-                // Cho phép truy cập tự do vào các API đăng ký/đăng nhập
-                .requestMatchers("/api/auth/**").permitAll()
+                // Chỉ đăng ký/đăng nhập được truy cập tự do; các API /api/auth/** khác
+                // (vd. /api/auth/users/{id}) bắt buộc phải xác thực
+                .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                 // Cho phép truy cập tự do vào API sức khỏe của AI Service
                 .requestMatchers("/api/ai/health").permitAll()
-                
-                // MẸO BẢO MẬT & TƯƠNG THÍCH:
-                // Để không làm break Frontend hiện tại (nếu chưa truyền JWT Header),
-                // chúng ta tạm thời permitAll() cho toàn bộ API, nhưng Filter vẫn đọc và giải mã JWT nếu có.
-                //
-                // Khi Frontend của bạn đã sẵn sàng truyền JWT Header (Bearer token), hãy thay đổi dòng dưới đây:
-                // từ .anyRequest().permitAll() sang .anyRequest().authenticated()
-                .anyRequest().permitAll()
+                // Cho phép truy cập tự do vào các tài nguyên tĩnh (frontend SPA)
+                .requestMatchers("/", "/*.html", "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                // Chỉ ADMIN mới được quản trị dữ liệu món ăn
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // Endpoint debug lộ toàn bộ ma trận tương tác người dùng -> chỉ ADMIN
+                .requestMatchers("/api/debug/**").hasRole("ADMIN")
+                // Mọi API còn lại bắt buộc phải xác thực bằng JWT
+                .anyRequest().authenticated()
             )
             // Cấu hình session stateless
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // Trả JSON 403 gọn gàng khi bị chặn bởi OwnershipGuard hoặc hasRole(...)
+            .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"message\":\"Access denied\"}");
+            }))
             // Thêm JwtRequestFilter vào trước UsernamePasswordAuthenticationFilter
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -70,8 +82,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Cấu hình cho phép các domain kết nối (origins)
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // Cấu hình cho phép các domain kết nối (origins) - chỉ các origin đã biết, không dùng wildcard
+        configuration.setAllowedOriginPatterns(allowedOriginPatterns);
         // Cấu hình các HTTP Method được phép
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         // Cấu hình các Header được chấp nhận

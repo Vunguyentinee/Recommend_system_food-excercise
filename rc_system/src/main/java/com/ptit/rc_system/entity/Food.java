@@ -2,7 +2,7 @@ package com.ptit.rc_system.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "Food_Library") // Ánh xạ chính xác vào bảng SQL của Vũ
+@Table(name = "Food_Library")
 public class Food {
 
     @Id
@@ -10,7 +10,7 @@ public class Food {
     @Column(name = "FoodID", columnDefinition = "int")
     private Long id;
 
-    @Column(name = "Name", columnDefinition = "nvarchar(255)")
+    @Column(name = "Name")
     private String name;
 
     @Column(name = "Calories")
@@ -25,13 +25,13 @@ public class Food {
     @Column(name = "Fat")
     private Double fat;
 
-    @Column(name = "Serving_Unit", columnDefinition = "nvarchar(50)")
+    @Column(name = "Serving_Unit")
     private String servingUnit;
 
-    @Column(name = "Meal_type", columnDefinition = "nvarchar(100)")
+    @Column(name = "Meal_type")
     private String mealType;
 
-    @Column(name = "Category", columnDefinition = "nvarchar(50)")
+    @Column(name = "Category")
     private String category;
 
     public Long getId() {
