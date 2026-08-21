@@ -3,10 +3,7 @@ function setSession(userId, userName, role, token) {
     }
 
     function baseUrl() {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return window.location.origin;
-      }
-      return "https://rc-system-health-backend.onrender.com";
+      return window.location.origin;
     }
 
     function register() {

@@ -2,10 +2,7 @@ let workoutPlan = null;
     let workoutHistory = null;
 
     function baseUrl() {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return window.location.origin;
-      }
-      return "https://rc-system-health-backend.onrender.com";
+      return window.location.origin;
     }
 
     const MEDIA_BASE_URL = ""; // Change to CDN / Cloud Storage URL if migrating assets (e.g. "https://res.cloudinary.com/your-cloud-name")

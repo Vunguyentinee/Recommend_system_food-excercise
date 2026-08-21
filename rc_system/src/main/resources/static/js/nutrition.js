@@ -11,10 +11,7 @@ let latestFoods = [];
 
     function getValue(id) { return document.getElementById(id).value; }
     function baseUrl() {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return window.location.origin;
-      }
-      return "https://rc-system-health-backend.onrender.com";
+      return window.location.origin;
     }
 
     function getSession() {
